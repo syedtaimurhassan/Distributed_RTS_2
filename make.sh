@@ -43,6 +43,9 @@ case "${1:-help}" in
   analyze)
     run_cli analyze "$CASE_DIR"
     ;;
+  simulate)
+    run_cli simulate "$CASE_DIR"
+    ;;
   clean)
     find "$ROOT_DIR/outputs/runs" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     ;;
@@ -57,6 +60,7 @@ Commands:
   normalize  Normalize the default case
   inspect    Inspect the default case
   analyze    Run baseline AVB analysis on the default case
+  simulate   Run baseline TSN/CBS simulation on the default case
   clean      Remove generated run directories
 EOF
     ;;

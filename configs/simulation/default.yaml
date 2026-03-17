@@ -3,4 +3,6 @@ trace_enabled: false
 max_events: 100000
 max_hyperperiod_us: 100000
 time_limit_us: null
+max_releases_per_stream: 1
+max_deliveries_total: null
 stop_when_all_streams_observed: true

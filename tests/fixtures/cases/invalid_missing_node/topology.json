@@ -1,0 +1,11 @@
+{
+  "nodes": [
+    { "id": "talker", "type": "end_system" },
+    { "id": "sw1", "type": "switch" },
+    { "id": "listener", "type": "end_system" }
+  ],
+  "links": [
+    { "id": "link-1", "source": "talker", "target": "sw1", "speed_mbps": 100.0 },
+    { "id": "link-2", "source": "sw1", "target": "listener", "speed_mbps": 100.0 }
+  ]
+}

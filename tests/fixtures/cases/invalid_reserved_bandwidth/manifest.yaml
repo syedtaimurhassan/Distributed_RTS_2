@@ -1,0 +1,14 @@
+case_id: invalid-reserved-bandwidth
+name: Invalid Reserved Bandwidth
+description: Baseline case fixture with Class A reserved bandwidth above one.
+topology: topology.json
+routes: routes.json
+streams: streams.json
+assumptions:
+  - line-topology
+  - single-direction
+  - baseline-tsn
+queue_profiles:
+  class_a:
+    idle_slope: 120.0
+    send_slope: 120.0

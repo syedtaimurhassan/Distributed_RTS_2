@@ -1,0 +1,7 @@
+case_id: invalid-missing-node
+name: Invalid Case Missing Node
+description: Route references an unknown node and should fail validation.
+assumptions:
+  - line-topology
+  - single-direction
+  - baseline-tsn

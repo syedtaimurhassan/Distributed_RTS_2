@@ -1,0 +1,15 @@
+{
+  "streams": [
+    {
+      "id": "stream-x",
+      "name": "Invalid stream",
+      "source": "talker",
+      "destination": "listener",
+      "traffic_class": "AVB_A",
+      "period_us": 1000.0,
+      "deadline_us": 1000.0,
+      "max_frame_size_bytes": 256,
+      "route_id": "route-stream-x"
+    }
+  ]
+}
