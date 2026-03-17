@@ -26,6 +26,8 @@ SIMULATION_TABLE_NAMES = (
     "forwarding_trace",
     "delivery_trace",
     "response_time_trace",
+    "credit_trace",
+    "scheduler_decision_trace",
     "stream_summary",
     "hop_summary",
     "queue_summary",

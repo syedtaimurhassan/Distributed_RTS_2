@@ -10,7 +10,7 @@ from .metric_collector import MetricCollector
 from .trace_collector import TraceCollector
 
 
-SIMULATION_SCHEMA_VERSION = "simulation.v1"
+SIMULATION_SCHEMA_VERSION = "simulation.v2"
 
 
 SIMULATION_TABLE_FIELDS: dict[str, list[str]] = {
@@ -81,6 +81,40 @@ SIMULATION_TABLE_FIELDS: dict[str, list[str]] = {
         "response_time_us",
         "deadline_us",
         "meets_deadline",
+    ],
+    "credit_trace": [
+        "timestamp_us",
+        "port_id",
+        "link_id",
+        "queue_id",
+        "traffic_class",
+        "credit_before",
+        "credit_after",
+        "change_reason",
+        "slope_mbps",
+        "elapsed_time_us",
+        "related_frame_id",
+        "blocking_frame_id",
+        "transmitting_frame_id",
+        "capped_at_zero",
+    ],
+    "scheduler_decision_trace": [
+        "timestamp_us",
+        "port_id",
+        "link_id",
+        "class_a_head_frame_id",
+        "class_a_queue_depth",
+        "class_a_credit",
+        "class_b_head_frame_id",
+        "class_b_queue_depth",
+        "class_b_credit",
+        "be_head_frame_id",
+        "be_queue_depth",
+        "current_transmission_frame_id",
+        "selected_queue_id",
+        "selected_frame_id",
+        "selected_traffic_class",
+        "decision_reason",
     ],
     "stream_summary": [
         "stream_id",

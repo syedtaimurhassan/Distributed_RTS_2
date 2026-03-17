@@ -276,3 +276,5 @@ def test_simulate_command_writes_required_simulation_artifacts(repo_root, sample
     assert (traces_root / "forwarding_trace.csv").exists()
     assert (traces_root / "delivery_trace.csv").exists()
     assert (traces_root / "response_time_trace.csv").exists()
+    assert (traces_root / "credit_trace.csv").exists()
+    assert (traces_root / "scheduler_decision_trace.csv").exists()

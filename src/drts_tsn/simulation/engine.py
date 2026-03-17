@@ -11,6 +11,7 @@ from .context import SimulationContext, build_simulation_context
 from .dispatcher import dispatch_event
 from .event_types import SimulationEventType
 from .outputs.simulation_result_builder import build_simulation_result
+from .services.credit_service import synchronize_port_credits
 from .services.stop_condition_service import should_stop
 
 
@@ -71,6 +72,8 @@ class SimulationEngine:
                 if context.network_state.statistics.finalized
                 else "event_queue_empty"
             )
+        for port_id in context.network_state.ports:
+            synchronize_port_credits(port_id, context=context, reason="simulation_end")
         context.trace_collector.record(
             timestamp_us=context.clock.current_time_us,
             event_type="simulation_end",

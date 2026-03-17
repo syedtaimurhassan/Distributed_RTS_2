@@ -43,4 +43,4 @@ def enqueue_frame(frame_id: str, port_id: str, context: SimulationContext) -> No
         description=f"Enqueued frame '{frame_id}' into queue '{queue_id}'.",
         attributes={"port_id": port_id, "queue_id": queue_id},
     )
-    schedule_next_transmission(port_id, context)
+    schedule_next_transmission(port_id, context, reason="enqueue")

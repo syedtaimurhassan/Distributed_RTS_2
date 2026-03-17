@@ -170,6 +170,84 @@ def build_response_time_row(
     }
 
 
+def build_credit_trace_row(
+    *,
+    timestamp_us: float,
+    port_id: str,
+    link_id: str,
+    queue_id: str,
+    traffic_class: TrafficClass,
+    credit_before: float,
+    credit_after: float,
+    change_reason: str,
+    slope_mbps: float,
+    elapsed_time_us: float,
+    related_frame_id: str | None,
+    blocking_frame_id: str | None,
+    transmitting_frame_id: str | None,
+    capped_at_zero: bool,
+) -> dict[str, object]:
+    """Return one CBS credit-change trace row."""
+
+    return {
+        "timestamp_us": timestamp_us,
+        "port_id": port_id,
+        "link_id": link_id,
+        "queue_id": queue_id,
+        "traffic_class": traffic_class.value,
+        "credit_before": credit_before,
+        "credit_after": credit_after,
+        "change_reason": change_reason,
+        "slope_mbps": slope_mbps,
+        "elapsed_time_us": elapsed_time_us,
+        "related_frame_id": related_frame_id,
+        "blocking_frame_id": blocking_frame_id,
+        "transmitting_frame_id": transmitting_frame_id,
+        "capped_at_zero": capped_at_zero,
+    }
+
+
+def build_scheduler_decision_row(
+    *,
+    timestamp_us: float,
+    port_id: str,
+    link_id: str,
+    class_a_head_frame_id: str | None,
+    class_a_queue_depth: int,
+    class_a_credit: float | None,
+    class_b_head_frame_id: str | None,
+    class_b_queue_depth: int,
+    class_b_credit: float | None,
+    be_head_frame_id: str | None,
+    be_queue_depth: int,
+    current_transmission_frame_id: str | None,
+    selected_queue_id: str | None,
+    selected_frame_id: str | None,
+    selected_traffic_class: str | None,
+    decision_reason: str,
+) -> dict[str, object]:
+    """Return one scheduler-decision trace row."""
+
+    return {
+        "timestamp_us": timestamp_us,
+        "port_id": port_id,
+        "link_id": link_id,
+        "class_a_head_frame_id": class_a_head_frame_id,
+        "class_a_queue_depth": class_a_queue_depth,
+        "class_a_credit": class_a_credit,
+        "class_b_head_frame_id": class_b_head_frame_id,
+        "class_b_queue_depth": class_b_queue_depth,
+        "class_b_credit": class_b_credit,
+        "be_head_frame_id": be_head_frame_id,
+        "be_queue_depth": be_queue_depth,
+        "current_transmission_frame_id": current_transmission_frame_id,
+        "selected_queue_id": selected_queue_id,
+        "selected_frame_id": selected_frame_id,
+        "selected_traffic_class": selected_traffic_class,
+        "decision_reason": decision_reason,
+    }
+
+
 def build_stream_summary_row(
     *,
     stream_id: str,

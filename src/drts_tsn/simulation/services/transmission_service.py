@@ -8,7 +8,7 @@ from drts_tsn.simulation.event_types import SimulationEventType
 from drts_tsn.simulation.outputs.trace_row_builders import build_transmission_row
 from drts_tsn.simulation.policies.transmission_selection import select_transmission_candidate
 
-from .credit_service import consume_credit_after_transmission
+from .credit_service import synchronize_port_credits
 from .scheduler_service import schedule_next_transmission
 
 
@@ -86,11 +86,20 @@ def finish_transmission(
     queueing_delay_us = start_time_us - enqueue_time_us
     response_time_so_far_us = end_time_us - frame_state.release_time_us
 
-    credit_before, credit_after, service_spacing_us = consume_credit_after_transmission(
-        port_id=port_id,
-        queue_id=queue_id,
-        transmission_time_us=transmission_time_us,
+    credit_updates = synchronize_port_credits(
+        port_id,
         context=context,
+        reason="transmission_end",
+        related_frame_id=frame_id,
+    )
+    credit_update = credit_updates.get(queue_id)
+    credit_before = credit_update.computation.credit_before if credit_update is not None else None
+    credit_after = credit_update.computation.credit_after if credit_update is not None else None
+    credit_state = port_state.credits.get(queue_id)
+    service_spacing_us = (
+        max(credit_state.next_eligible_time_us - start_time_us, transmission_time_us)
+        if credit_state is not None
+        else transmission_time_us
     )
 
     frame_state.transmission_end_timestamps_by_hop[hop_index] = end_time_us
@@ -141,4 +150,4 @@ def finish_transmission(
             {"frame_id": frame_id},
         )
     context.network_state.statistics.scheduled_events += 1
-    schedule_next_transmission(port_id, context)
+    schedule_next_transmission(port_id, context, reason="transmission_end")

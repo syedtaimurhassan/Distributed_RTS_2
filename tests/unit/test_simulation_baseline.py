@@ -25,6 +25,9 @@ def test_simulation_engine_computes_baseline_response(sample_case_path) -> None:
     assert len(result.tables["forwarding_trace"]) == 1
     assert len(result.tables["delivery_trace"]) == 1
     assert result.tables["response_time_trace"][0]["response_time_us"] == pytest.approx(40.96)
+    assert len(result.tables["credit_trace"]) >= 2
+    assert result.tables["credit_trace"][0]["change_reason"].startswith("transmit:")
+    assert len(result.tables["scheduler_decision_trace"]) >= 2
     assert len(result.tables["stream_summary"]) == 1
     assert len(result.tables["hop_summary"]) == 2
     assert len(result.tables["queue_summary"]) == 6

@@ -30,6 +30,11 @@ def test_simulate_pipeline_writes_required_artifacts(
     assert_csv_contract(traces_root / "transmission_trace.csv", SIMULATION_TABLE_FIELDS["transmission_trace"])
     assert_csv_contract(traces_root / "forwarding_trace.csv", SIMULATION_TABLE_FIELDS["forwarding_trace"])
     assert_csv_contract(traces_root / "delivery_trace.csv", SIMULATION_TABLE_FIELDS["delivery_trace"])
+    assert_csv_contract(traces_root / "credit_trace.csv", SIMULATION_TABLE_FIELDS["credit_trace"])
+    assert_csv_contract(
+        traces_root / "scheduler_decision_trace.csv",
+        SIMULATION_TABLE_FIELDS["scheduler_decision_trace"],
+    )
     response_rows = assert_csv_contract(
         traces_root / "response_time_trace.csv",
         SIMULATION_TABLE_FIELDS["response_time_trace"],

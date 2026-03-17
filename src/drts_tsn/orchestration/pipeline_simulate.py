@@ -12,6 +12,7 @@ from drts_tsn.output.metadata_writer import write_run_metadata
 from drts_tsn.output.run_layout import RunLayout, create_run_layout
 from drts_tsn.output.writers import load_output_config
 from drts_tsn.reporting.csv_catalog import (
+    SIMULATION_CREDIT_TRACE_CSV,
     SIMULATION_DELIVERY_TRACE_CSV,
     SIMULATION_DETAILS_CSV,
     SIMULATION_ENQUEUE_TRACE_CSV,
@@ -21,6 +22,7 @@ from drts_tsn.reporting.csv_catalog import (
     SIMULATION_QUEUE_SUMMARY_CSV,
     SIMULATION_RESPONSE_TIME_TRACE_CSV,
     SIMULATION_RUN_SUMMARY_CSV,
+    SIMULATION_SCHEDULER_DECISION_TRACE_CSV,
     SIMULATION_STREAMS_CSV,
     SIMULATION_STREAM_SUMMARY_CSV,
     SIMULATION_TRANSMISSION_TRACE_CSV,
@@ -104,6 +106,8 @@ def execute(
             ("forwarding_trace", SIMULATION_FORWARDING_TRACE_CSV, layout.simulation_traces_dir),
             ("delivery_trace", SIMULATION_DELIVERY_TRACE_CSV, layout.simulation_traces_dir),
             ("response_time_trace", SIMULATION_RESPONSE_TIME_TRACE_CSV, layout.simulation_traces_dir),
+            ("credit_trace", SIMULATION_CREDIT_TRACE_CSV, layout.simulation_traces_dir),
+            ("scheduler_decision_trace", SIMULATION_SCHEDULER_DECISION_TRACE_CSV, layout.simulation_traces_dir),
         )
         for table_name, filename, directory in result_tables:
             path = write_csv_artifact(

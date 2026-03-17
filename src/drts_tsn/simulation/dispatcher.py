@@ -47,7 +47,7 @@ def dispatch_event(event: ScheduledEvent, context: SimulationContext) -> None:
     if event_type is SimulationEventType.CREDIT_UPDATE:
         queue_id = str(event.payload["queue_id"])
         update_credit(queue_id, context)
-        schedule_next_transmission(resolve_queue_port_id(queue_id, context), context)
+        schedule_next_transmission(resolve_queue_port_id(queue_id, context), context, reason="credit_update")
         return
     if event_type is SimulationEventType.FINALIZE_RUN:
         context.network_state.statistics.finalized = True
