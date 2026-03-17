@@ -6,6 +6,7 @@ VENV_DIR="$ROOT_DIR/.venv"
 PYTHON_BIN="$VENV_DIR/bin/python"
 PIP_BIN="$VENV_DIR/bin/pip"
 CASE_DIR="${CASE_DIR:-$ROOT_DIR/cases/external/test-case-1}"
+CASES_ROOT="${CASES_ROOT:-$ROOT_DIR/cases/external}"
 
 ensure_python() {
   if [[ -x "$PYTHON_BIN" ]]; then
@@ -46,6 +47,18 @@ case "${1:-help}" in
   simulate)
     run_cli simulate "$CASE_DIR"
     ;;
+  compare)
+    ANALYSIS_RESULT="${ANALYSIS_RESULT:-$ROOT_DIR/outputs/runs/latest/analysis/results/analysis_result.json}"
+    SIMULATION_RESULT="${SIMULATION_RESULT:-$ROOT_DIR/outputs/runs/latest/simulation/results/simulation_result.json}"
+    run_cli compare --simulation-result "$SIMULATION_RESULT" --analysis-result "$ANALYSIS_RESULT"
+    ;;
+  run)
+    run_cli run-case "$CASE_DIR"
+    ;;
+  batch)
+    BATCH_OPERATION="${BATCH_OPERATION:-run-case}"
+    run_cli batch-run "$CASES_ROOT" --operation "$BATCH_OPERATION"
+    ;;
   clean)
     find "$ROOT_DIR/outputs/runs" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     ;;
@@ -61,6 +74,9 @@ Commands:
   inspect    Inspect the default case
   analyze    Run baseline AVB analysis on the default case
   simulate   Run baseline TSN/CBS simulation on the default case
+  compare    Compare the latest analysis and simulation run results
+  run        Run analyze + simulate + compare for the default case
+  batch      Run a selected operation over all discovered case directories
   clean      Remove generated run directories
 EOF
     ;;

@@ -119,6 +119,8 @@ SIMULATION_TABLE_FIELDS: dict[str, list[str]] = {
     "stream_summary": [
         "stream_id",
         "traffic_class",
+        "route_id",
+        "hop_count",
         "release_count",
         "delivery_count",
         "max_response_time_us",

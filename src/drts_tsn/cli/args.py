@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .commands import analyze, inspect_case, normalize_case, simulate, validate_case
+from .commands import analyze, batch_run, compare, inspect_case, normalize_case, run_case, simulate, validate_case
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,7 +13,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="drts",
-        description="TSN case ingestion, normalization, inspection, baseline AVB analysis, and simulation.",
+        description=(
+            "TSN case ingestion, normalization, inspection, baseline AVB analysis, "
+            "simulation, and result comparison."
+        ),
     )
     parser.add_argument(
         "--logging-config",
@@ -27,4 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_case.register(subparsers)
     analyze.register(subparsers)
     simulate.register(subparsers)
+    compare.register(subparsers)
+    run_case.register(subparsers)
+    batch_run.register(subparsers)
     return parser

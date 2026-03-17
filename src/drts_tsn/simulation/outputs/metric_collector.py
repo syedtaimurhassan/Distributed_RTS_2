@@ -71,11 +71,13 @@ class MetricCollector:
 
         self.detail_rows = list(self.tables["transmission_trace"])
         self.stream_results = []
+        routes_by_stream = {route.stream_id: route for route in case.routes}
         for table_name in ("stream_summary", "hop_summary", "queue_summary", "run_summary"):
             self.tables[table_name] = []
         for stream in case.streams:
             response_times = self.frame_response_times_by_stream.get(stream.id, [])
             stream_state = network_state.streams[stream.id]
+            route = routes_by_stream.get(stream.id)
             status = (
                 ResultStatus.OK
                 if stream_state.completed_frames == stream_state.released_frames and stream_state.completed_frames > 0
@@ -87,6 +89,8 @@ class MetricCollector:
                 build_stream_summary_row(
                     stream_id=stream.id,
                     traffic_class=stream.traffic_class,
+                    route_id=stream.route_id,
+                    hop_count=max(len(route.hops) - 1, 0) if route is not None else 0,
                     release_count=stream_state.released_frames,
                     delivery_count=stream_state.completed_frames,
                     max_response_time_us=max_response_time_us,

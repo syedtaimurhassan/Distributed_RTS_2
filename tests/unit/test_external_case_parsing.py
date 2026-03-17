@@ -78,6 +78,78 @@ def test_mapper_accepts_baseline_traffic_class_aliases(sample_case_path: Path) -
     assert case.streams[0].route_id == "route-stream-a"
 
 
+def test_loader_infers_provided_course_case_filenames(tmp_path: Path) -> None:
+    """Course-style prefixed filenames should load even without a manifest."""
+
+    case_dir = tmp_path / "provided-course-case"
+    case_dir.mkdir()
+    write_json(
+        {
+            "topology": {
+                "switches": [{"id": "sw1", "ports": 2}],
+                "end_systems": [{"id": "es0"}, {"id": "es1"}],
+                "links": [
+                    {
+                        "id": "Link0",
+                        "source": "es0",
+                        "destination": "sw1",
+                        "sourcePort": 0,
+                        "destinationPort": 0,
+                        "bandwidth_mbps": 100,
+                    },
+                    {
+                        "id": "Link1",
+                        "source": "sw1",
+                        "destination": "es1",
+                        "sourcePort": 1,
+                        "destinationPort": 0,
+                        "bandwidth_mbps": 100,
+                    },
+                ],
+            }
+        },
+        case_dir / "provided-course-case-topology.json",
+    )
+    write_json(
+        {
+            "routes": [
+                {
+                    "flow_id": 0,
+                    "paths": [[{"node": "es0", "port": 0}, {"node": "sw1", "port": 1}, {"node": "es1", "port": 0}]],
+                }
+            ]
+        },
+        case_dir / "provided-course-case-routes.json",
+    )
+    write_json(
+        {
+            "streams": [
+                {
+                    "id": 0,
+                    "name": "Stream0",
+                    "source": "es0",
+                    "destinations": [{"id": "es1", "deadline": 1000}],
+                    "PCP": 2,
+                    "size": 256,
+                    "period": 1000,
+                }
+            ]
+        },
+        case_dir / "provided-course-case-streams.json",
+    )
+    (case_dir / "provided-course-case-WCRTs.csv").write_text(
+        "stream_id,expected_wcrt_us\nstream-0,0.0\n",
+        encoding="utf-8",
+    )
+
+    bundle = load_external_case(case_dir)
+
+    assert bundle.filenames["topology"] == "provided-course-case-topology.json"
+    assert bundle.filenames["routes"] == "provided-course-case-routes.json"
+    assert bundle.filenames["streams"] == "provided-course-case-streams.json"
+    assert bundle.filenames["expected_wcrts"] == "provided-course-case-WCRTs.csv"
+
+
 def test_normalized_export_bundle_writes_core_artifacts(sample_case_path: Path, tmp_path: Path) -> None:
     """Normalized export should emit JSON and the required CSV bundle."""
 

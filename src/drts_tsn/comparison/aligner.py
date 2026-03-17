@@ -1,20 +1,81 @@
-"""Alignment helpers for simulation and analytical result sets."""
+"""Alignment helpers for stable analysis and simulation output tables."""
 
 from __future__ import annotations
 
-from drts_tsn.domain.results import AnalysisRunResult, AnalysisStreamResult, SimulationRunResult, SimulationStreamResult
+from collections import Counter
+from dataclasses import dataclass, field
 
 
-def align_stream_results(
-    simulation_result: SimulationRunResult,
-    analysis_result: AnalysisRunResult,
-) -> list[tuple[SimulationStreamResult | None, AnalysisStreamResult | None, str]]:
-    """Align results by stream ID."""
+@dataclass(slots=True, frozen=True)
+class AlignedStreamRow:
+    """One stream-level alignment between analysis and simulation summaries."""
 
-    simulation_by_id = {result.stream_id: result for result in simulation_result.stream_results}
-    analysis_by_id = {result.stream_id: result for result in analysis_result.stream_results}
-    stream_ids = sorted(set(simulation_by_id) | set(analysis_by_id))
-    return [
-        (simulation_by_id.get(stream_id), analysis_by_id.get(stream_id), stream_id)
-        for stream_id in stream_ids
-    ]
+    stream_id: str
+    analysis_row: dict[str, object] | None = None
+    simulation_row: dict[str, object] | None = None
+
+
+@dataclass(slots=True)
+class AlignmentResult:
+    """Aligned rows plus machine-readable diagnostics about the inputs."""
+
+    aligned_rows: list[AlignedStreamRow] = field(default_factory=list)
+    diagnostics: list[dict[str, object]] = field(default_factory=list)
+
+
+def _index_rows(
+    rows: list[dict[str, object]],
+    *,
+    source_name: str,
+) -> tuple[dict[str, dict[str, object]], list[dict[str, object]]]:
+    """Index rows by canonical stream ID and report duplicate identifiers."""
+
+    counts = Counter(str(row["stream_id"]) for row in rows)
+    indexed: dict[str, dict[str, object]] = {}
+    diagnostics: list[dict[str, object]] = []
+    for row in rows:
+        stream_id = str(row["stream_id"])
+        if stream_id not in indexed:
+            indexed[stream_id] = row
+    for stream_id, count in sorted(counts.items()):
+        if count > 1:
+            diagnostics.append(
+                {
+                    "diagnostic_code": f"comparison.duplicate.{source_name}_stream_id",
+                    "severity": "error",
+                    "stream_id": stream_id,
+                    "source": source_name,
+                    "message": (
+                        f"{source_name.capitalize()} results contain {count} rows for stream "
+                        f"'{stream_id}'. The first row is used for comparison."
+                    ),
+                }
+            )
+    return indexed, diagnostics
+
+
+def align_stream_rows(
+    *,
+    analysis_rows: list[dict[str, object]],
+    simulation_rows: list[dict[str, object]],
+) -> AlignmentResult:
+    """Align stream summary rows by canonical stream ID."""
+
+    indexed_analysis, diagnostics = _index_rows(analysis_rows, source_name="analysis")
+    indexed_simulation, simulation_diagnostics = _index_rows(
+        simulation_rows,
+        source_name="simulation",
+    )
+    diagnostics.extend(simulation_diagnostics)
+    stream_ids = sorted(set(indexed_analysis) | set(indexed_simulation))
+    return AlignmentResult(
+        aligned_rows=[
+            AlignedStreamRow(
+                stream_id=stream_id,
+                analysis_row=indexed_analysis.get(stream_id),
+                simulation_row=indexed_simulation.get(stream_id),
+            )
+            for stream_id in stream_ids
+        ],
+        diagnostics=diagnostics,
+    )

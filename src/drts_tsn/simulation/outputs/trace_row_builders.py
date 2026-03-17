@@ -252,6 +252,8 @@ def build_stream_summary_row(
     *,
     stream_id: str,
     traffic_class: TrafficClass,
+    route_id: str | None,
+    hop_count: int,
     release_count: int,
     delivery_count: int,
     max_response_time_us: float | None,
@@ -263,6 +265,8 @@ def build_stream_summary_row(
     return {
         "stream_id": stream_id,
         "traffic_class": traffic_class.value,
+        "route_id": route_id,
+        "hop_count": hop_count,
         "release_count": release_count,
         "delivery_count": delivery_count,
         "max_response_time_us": max_response_time_us,

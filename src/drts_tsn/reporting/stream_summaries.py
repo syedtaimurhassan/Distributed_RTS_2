@@ -38,10 +38,11 @@ def comparison_stream_rows(result: ComparisonRunResult) -> list[dict[str, object
     return [
         {
             "stream_id": row.stream_id,
-            "simulation_response_time_us": row.simulation_response_time_us,
-            "analysis_response_time_us": row.analysis_response_time_us,
+            "simulated_worst_response_time_us": row.simulated_worst_response_time_us,
+            "analytical_wcrt_us": row.analytical_wcrt_us,
             "absolute_difference_us": row.absolute_difference_us,
-            "within_tolerance": row.within_tolerance,
+            "analysis_minus_simulation_margin_us": row.analysis_minus_simulation_margin_us,
+            "simulation_exceeded_analysis": row.simulation_exceeded_analysis,
             "status": row.status.value,
         }
         for row in result.entries

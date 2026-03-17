@@ -29,9 +29,9 @@ def test_python_module_help_runs(repo_root) -> None:
     assert "inspect-case" in completed.stdout
     assert "analyze" in completed.stdout
     assert "simulate" in completed.stdout
-    assert "compare" not in completed.stdout
-    assert "run-case" not in completed.stdout
-    assert "batch-run" not in completed.stdout
+    assert "compare" in completed.stdout
+    assert "run-case" in completed.stdout
+    assert "batch-run" in completed.stdout
 
 
 def test_validate_case_command_runs_for_sample_case(repo_root, sample_case_path) -> None:
@@ -278,3 +278,139 @@ def test_simulate_command_writes_required_simulation_artifacts(repo_root, sample
     assert (traces_root / "response_time_trace.csv").exists()
     assert (traces_root / "credit_trace.csv").exists()
     assert (traces_root / "scheduler_decision_trace.csv").exists()
+
+
+def test_compare_command_writes_required_comparison_artifacts(repo_root, sample_case_path) -> None:
+    """The compare command should align prior analysis and simulation outputs."""
+
+    analysis_run_id = f"cli-compare-analysis-{uuid.uuid4().hex}"
+    simulation_run_id = f"cli-compare-simulation-{uuid.uuid4().hex}"
+    comparison_run_id = f"cli-compare-{uuid.uuid4().hex}"
+    analyze_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "analyze",
+            str(sample_case_path),
+            "--run-id",
+            analysis_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    simulate_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "simulate",
+            str(sample_case_path),
+            "--run-id",
+            simulation_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert analyze_completed.returncode == 0
+    assert simulate_completed.returncode == 0
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "compare",
+            "--simulation-result",
+            str(
+                repo_root
+                / "outputs"
+                / "runs"
+                / simulation_run_id
+                / "simulation"
+                / "results"
+                / "simulation_result.json"
+            ),
+            "--analysis-result",
+            str(
+                repo_root
+                / "outputs"
+                / "runs"
+                / analysis_run_id
+                / "analysis"
+                / "results"
+                / "analysis_result.json"
+            ),
+            "--run-id",
+            comparison_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    results_root = repo_root / "outputs" / "runs" / comparison_run_id / "comparison" / "results"
+    assert (results_root / "comparison_result.json").exists()
+    assert (results_root / "stream_comparison.csv").exists()
+    assert (results_root / "aggregate_comparison.csv").exists()
+    assert (results_root / "comparison_diagnostics.csv").exists()
+    assert (results_root / "expected_wcrt_comparison.csv").exists()
+
+
+def test_run_case_command_writes_end_to_end_artifacts(repo_root, sample_case_path) -> None:
+    """The run-case command should write analysis, simulation, and comparison artifacts."""
+
+    run_id = f"cli-run-case-{uuid.uuid4().hex}"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "run-case",
+            str(sample_case_path),
+            "--run-id",
+            run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    run_root = repo_root / "outputs" / "runs" / run_id
+    assert (run_root / "normalized" / "test-case-1.json").exists()
+    assert (run_root / "analysis" / "results" / "analysis_result.json").exists()
+    assert (run_root / "simulation" / "results" / "simulation_result.json").exists()
+    assert (run_root / "comparison" / "results" / "comparison_result.json").exists()
+    assert (run_root / "comparison" / "results" / "stream_comparison.csv").exists()
+
+
+def test_batch_run_command_runs_for_external_cases_root(repo_root, sample_case_path) -> None:
+    """The batch-run command should discover the sample case and execute the selected operation."""
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "batch-run",
+            str(sample_case_path.parent),
+            "--operation",
+            "run-case",
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "case_count" in completed.stdout
+    assert "test-case-1" in completed.stdout

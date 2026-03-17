@@ -2,7 +2,7 @@
 
 Scaffold for a university mini-project on Time-Sensitive Networking (TSN) worst-case response-time (WCRT) analysis, discrete-event simulation, and result comparison.
 
-The repository is intentionally scaffold-first. It provides package boundaries, CLI entrypoints, configuration files, output contracts, reusable adapters, validation and normalization layers, and baseline subsystem engines. Milestone 4 adds the baseline discrete-event simulation path on top of the normalized case pipeline.
+The repository is intentionally scaffold-first. It provides package boundaries, CLI entrypoints, configuration files, output contracts, reusable adapters, validation and normalization layers, and baseline subsystem engines. Milestone 6 adds a first-class comparison pipeline on top of the existing normalized, analysis, and simulation paths.
 
 ## Current Scope
 
@@ -12,6 +12,7 @@ The repository is intentionally scaffold-first. It provides package boundaries, 
 - Explicit validation and normalization layers
 - Baseline AVB analytical WCRT engine for normalized cases
 - Baseline discrete-event TSN/CBS simulator for normalized cases
+- Artifact-driven comparison between analytical WCRT and simulated response times
 - Separate top-level simulation, analysis, and comparison subsystems
 - Output helpers for JSON, CSV, and run-directory creation
 - Initial tests and documentation skeleton
@@ -41,6 +42,9 @@ The `drts` CLI exposes the following baseline subcommands:
 - `inspect-case`
 - `analyze`
 - `simulate`
+- `compare`
+- `run-case`
+- `batch-run`
 
 The CLI contains wiring only. Business logic lives in orchestration, adapters, validation, normalization, analysis, and output modules.
 
@@ -54,10 +58,13 @@ The CLI contains wiring only. Business logic lives in orchestration, adapters, v
 ./make.sh inspect
 ./make.sh analyze
 ./make.sh simulate
+./make.sh compare
+./make.sh run
+./make.sh batch
 ```
 
 For local development without installation, `sitecustomize.py` injects `src/` into `sys.path` so `python -m drts_tsn.cli.main --help` works from the repository root.
 
 ## Status
 
-The simulator now runs the baseline line-topology scenario with strict-priority queueing, hop-by-hop forwarding, non-preemptive transmissions, and simplified modular CBS eligibility handling. Full IEEE CBS credit behavior and simulator/analysis comparison remain later milestones.
+The baseline workflow now supports normalized-case ingestion, AVB analysis, discrete-event simulation, and artifact-driven comparison. The compare pipeline aligns streams by canonical stream ID and emits machine-readable summaries and diagnostics. Broader topology support and post-baseline extensions remain later milestones.

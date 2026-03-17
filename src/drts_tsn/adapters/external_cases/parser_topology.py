@@ -10,8 +10,31 @@ def parse_topology_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
     if not isinstance(payload, dict):
         raise ValueError("Topology file must contain a JSON object.")
-    nodes = payload.get("nodes", [])
-    links = payload.get("links", [])
+    topology_payload = payload.get("topology", payload)
+    if not isinstance(topology_payload, dict):
+        raise ValueError("Topology payload must resolve to an object.")
+    if "nodes" in topology_payload:
+        nodes = topology_payload.get("nodes", [])
+    else:
+        nodes = [
+            {"id": node["id"], "type": "switch", "name": node.get("name")}
+            for node in topology_payload.get("switches", [])
+        ] + [
+            {"id": node["id"], "type": "end_system", "name": node.get("name")}
+            for node in topology_payload.get("end_systems", [])
+        ]
+    if "links" in topology_payload:
+        links = [
+            {
+                "id": link["id"],
+                "source": link.get("source"),
+                "target": link.get("target", link.get("destination")),
+                "speed_mbps": link.get("speed_mbps", link.get("bandwidth_mbps")),
+            }
+            for link in topology_payload.get("links", [])
+        ]
+    else:
+        links = []
     if not isinstance(nodes, list):
         raise ValueError("Topology field 'nodes' must be a list.")
     if not isinstance(links, list):

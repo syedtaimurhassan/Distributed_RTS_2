@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from drts_tsn.adapters.external_cases.schema_checks import missing_required_files
+from drts_tsn.adapters.external_cases.schema_checks import infer_case_filenames, missing_required_files
+from drts_tsn.io.manifest import load_manifest
 
 from .pipeline_analyze import execute as analyze_case
 from .pipeline_run_case import execute as run_case
@@ -16,7 +17,11 @@ def _discover_case_directories(root: Path) -> list[Path]:
 
     discovered: list[Path] = []
     for directory in sorted([root, *root.rglob("*")]):
-        if directory.is_dir() and not missing_required_files(directory):
+        if not directory.is_dir():
+            continue
+        manifest = load_manifest(directory)
+        filenames = infer_case_filenames(directory, manifest=manifest)
+        if not missing_required_files(directory, filenames):
             discovered.append(directory)
     return discovered
 
