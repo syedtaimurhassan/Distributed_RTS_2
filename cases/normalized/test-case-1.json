@@ -1,0 +1,89 @@
+{
+  "assumptions": [
+    "line-topology",
+    "single-direction",
+    "baseline-tsn"
+  ],
+  "expected_results": [
+    {
+      "expected_wcrt_us": 0.0,
+      "stream_id": "stream-a"
+    }
+  ],
+  "metadata": {
+    "case_id": "test-case-1",
+    "description": "Minimal scaffold input case for local validation and normalization.",
+    "name": "Assignment Baseline Test Case 1",
+    "source_directory": "/Users/taimurshah/Downloads/DTU/Semester-3/DRTS/Distributed_RTS_2/cases/external/test-case-1",
+    "tags": [
+      "line-topology",
+      "single-direction",
+      "baseline-tsn"
+    ]
+  },
+  "queues": [],
+  "routes": [
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "node_id": "talker"
+        },
+        {
+          "egress_port_id": null,
+          "node_id": "sw1"
+        },
+        {
+          "egress_port_id": null,
+          "node_id": "listener"
+        }
+      ],
+      "stream_id": "stream-a"
+    }
+  ],
+  "streams": [
+    {
+      "destination_node_id": "listener",
+      "id": "stream-a",
+      "max_frame_size_bytes": 256,
+      "name": "AVB A demo stream",
+      "period_us": 1000.0,
+      "source_node_id": "talker",
+      "traffic_class": "class_a"
+    }
+  ],
+  "topology": {
+    "links": [
+      {
+        "id": "link-1",
+        "source_node_id": "talker",
+        "speed_mbps": 100.0,
+        "target_node_id": "sw1"
+      },
+      {
+        "id": "link-2",
+        "source_node_id": "sw1",
+        "speed_mbps": 100.0,
+        "target_node_id": "listener"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "talker",
+        "name": null,
+        "type": "end_system"
+      },
+      {
+        "id": "sw1",
+        "name": null,
+        "type": "switch"
+      },
+      {
+        "id": "listener",
+        "name": null,
+        "type": "end_system"
+      }
+    ],
+    "ports": []
+  }
+}

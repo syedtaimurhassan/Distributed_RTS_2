@@ -1,0 +1,6 @@
+# Explicitly disable detailed simulation traces.
+trace_enabled: false
+max_events: 100000
+max_hyperperiod_us: 100000
+time_limit_us: null
+stop_when_all_streams_observed: true

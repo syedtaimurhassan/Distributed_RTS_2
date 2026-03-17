@@ -1,0 +1,5 @@
+# Default baseline AVB analysis settings.
+strict_validation: true
+emit_explanations: true
+fixed_point_limit: 100
+response_time_limit_us: 1000000.0

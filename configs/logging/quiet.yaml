@@ -1,0 +1,6 @@
+# Minimal logging for scripted runs.
+level: WARNING
+format: "%(levelname)s | %(message)s"
+include_context: false
+event_logging:
+  enabled: false

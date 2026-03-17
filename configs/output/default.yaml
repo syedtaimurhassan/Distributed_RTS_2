@@ -1,0 +1,6 @@
+# Default output behavior for scaffold runs.
+write_json: true
+write_csv: true
+write_metadata: true
+write_trace_csv: false
+symlink_latest: true

@@ -1,0 +1,6 @@
+# Extended output mode with trace artifacts enabled.
+write_json: true
+write_csv: true
+write_metadata: true
+write_trace_csv: true
+symlink_latest: true

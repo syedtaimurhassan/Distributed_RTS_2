@@ -1,0 +1,6 @@
+# Verbose logging for debugging CLI pipelines and adapters.
+level: DEBUG
+format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+include_context: true
+event_logging:
+  enabled: true

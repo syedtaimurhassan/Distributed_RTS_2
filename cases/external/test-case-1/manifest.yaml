@@ -1,0 +1,11 @@
+case_id: test-case-1
+name: Assignment Baseline Test Case 1
+description: Minimal scaffold input case for local validation and normalization.
+topology: topology.json
+routes: routes.json
+streams: streams.json
+expected_wcrts: expected_wcrts.csv
+assumptions:
+  - line-topology
+  - single-direction
+  - baseline-tsn

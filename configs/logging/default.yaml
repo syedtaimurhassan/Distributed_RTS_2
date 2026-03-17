@@ -1,0 +1,6 @@
+# Default logging configuration for local scaffold runs.
+level: INFO
+format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+include_context: true
+event_logging:
+  enabled: false

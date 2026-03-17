@@ -1,0 +1,6 @@
+# Strict validation intended for later analytical development.
+strict_validation: true
+emit_explanations: true
+allow_placeholder_formulas: false
+fixed_point_limit: 100
+response_time_limit_us: 1000000.0
