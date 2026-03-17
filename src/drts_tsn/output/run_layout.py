@@ -27,6 +27,18 @@ class RunLayout:
     metadata_dir: Path
 
 
+@dataclass(slots=True)
+class BatchLayout:
+    """Resolved directory layout for one batch execution."""
+
+    output_root: Path
+    batch_id: str
+    batch_dir: Path
+    catalog_dir: Path
+    failures_dir: Path
+    metadata_dir: Path
+
+
 def create_run_layout(
     output_root: Path,
     *,
@@ -76,5 +88,45 @@ def create_run_layout(
                 latest.symlink_to(run_dir.name)
             except OSError:
                 # TODO: Consider a portable fallback if symlinks become problematic.
+                pass
+    return layout
+
+
+def create_batch_layout(
+    output_root: Path,
+    *,
+    batch_id: str | None = None,
+    create: bool = True,
+    symlink_latest: bool = True,
+) -> BatchLayout:
+    """Create or resolve a standard batch artifact layout."""
+
+    resolved_batch_id = batch_id or utc_timestamp_compact()
+    batches_root = output_root / "batches"
+    batch_dir = batches_root / resolved_batch_id
+    layout = BatchLayout(
+        output_root=output_root,
+        batch_id=resolved_batch_id,
+        batch_dir=batch_dir,
+        catalog_dir=batch_dir / "catalog",
+        failures_dir=batch_dir / "failures",
+        metadata_dir=batch_dir / "metadata",
+    )
+    if create:
+        for path in (
+            batches_root,
+            layout.batch_dir,
+            layout.catalog_dir,
+            layout.failures_dir,
+            layout.metadata_dir,
+        ):
+            ensure_directory(path)
+        if symlink_latest:
+            latest = batches_root / "latest"
+            if latest.exists() or latest.is_symlink():
+                latest.unlink()
+            try:
+                latest.symlink_to(batch_dir.name)
+            except OSError:
                 pass
     return layout

@@ -66,8 +66,21 @@ def test_parser_registers_batch_run_command() -> None:
     """The parser should wire the batch-run command."""
 
     parser = build_parser()
-    args = parser.parse_args(["batch-run", "cases/external", "--operation", "run-case"])
+    args = parser.parse_args(
+        [
+            "batch-run",
+            "cases/external",
+            "--operation",
+            "run-case",
+            "--batch-id",
+            "batch-demo",
+            "--output-root",
+            "tmp/out",
+        ]
+    )
     assert args.command == "batch-run"
     assert str(args.cases_root) == "cases/external"
     assert args.operation == "run-case"
+    assert args.batch_id == "batch-demo"
+    assert str(args.output_root) == "tmp/out"
     assert callable(args.handler)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from drts_tsn.io.json_io import read_json
 from drts_tsn.orchestration.pipeline_simulate import execute
 from drts_tsn.simulation.outputs.simulation_result_builder import SIMULATION_TABLE_FIELDS
 
@@ -18,6 +19,10 @@ def test_simulate_pipeline_writes_required_artifacts(
     assert result.summary["engine_status"] == "ok"
     assert result.tables["response_time_trace"]
     assert result.tables["stream_summary"]
+    run_manifest_json = read_json(layout.metadata_dir / "run_manifest.json")
+    assert run_manifest_json["pipeline"] == "simulate"
+    assert run_manifest_json["command_invoked"].startswith("simulate ")
+    assert (layout.metadata_dir / "artifact_index.json").exists()
 
     results_root = layout.simulation_results_dir
     traces_root = layout.simulation_traces_dir

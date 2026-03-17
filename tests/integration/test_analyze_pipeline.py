@@ -31,14 +31,23 @@ def test_analyze_pipeline_writes_required_summary_and_trace_artifacts(
     assert result.stream_results[0].wcrt_us == 40.96
     result_path = layout.analysis_results_dir / "analysis_result.json"
     manifest_path = layout.metadata_dir / "analysis_manifest.json"
+    run_manifest_path = layout.metadata_dir / "run_manifest.json"
+    artifact_index_path = layout.metadata_dir / "artifact_index.json"
     assert result_path.exists()
     assert manifest_path.exists()
+    assert run_manifest_path.exists()
+    assert artifact_index_path.exists()
 
     result_json = read_json(result_path)
     manifest_json = read_json(manifest_path)
+    run_manifest_json = read_json(run_manifest_path)
 
     assert result_json["summary"]["schema_version"] == ANALYSIS_SCHEMA_VERSION
     assert manifest_json["schema_version"] == ANALYSIS_SCHEMA_VERSION
+    assert run_manifest_json["pipeline"] == "analyze"
+    assert run_manifest_json["case"]["case_path"]
+    assert run_manifest_json["command_invoked"].startswith("analyze ")
+    assert run_manifest_json["config_snapshot"]["analysis"]["values"]["strict_validation"] is True
 
     csv_targets = {
         "stream_wcrt_summary": layout.analysis_results_dir / ANALYSIS_STREAM_WCRT_SUMMARY_CSV,

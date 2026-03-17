@@ -8,7 +8,11 @@ from drts_tsn.io.paths import outputs_root
 from drts_tsn.output.artifact_index import ArtifactRecord, write_artifact_index
 from drts_tsn.output.csv_writers import write_csv_artifact
 from drts_tsn.output.json_writers import write_json_artifact
-from drts_tsn.output.metadata_writer import write_run_metadata
+from drts_tsn.output.metadata_writer import (
+    build_run_manifest,
+    snapshot_config,
+    write_run_manifest_bundle,
+)
 from drts_tsn.output.run_layout import RunLayout, create_run_layout
 from drts_tsn.output.writers import load_output_config
 from drts_tsn.reporting.csv_catalog import (
@@ -80,9 +84,18 @@ def execute(
     normalized_path = export_prepared_case(
         prepared, layout.normalized_dir / f"{prepared.normalized_case.metadata.case_id}.json"
     )
+    simulation_config = load_simulation_config(simulation_config_path)
+    command_parts = ["simulate", str(prepared.case_directory)]
+    if simulation_config_path is not None:
+        command_parts.extend(["--simulation-config", str(simulation_config_path)])
+    if output_config_path is not None:
+        command_parts.extend(["--output-config", str(output_config_path)])
+    if run_id is not None:
+        command_parts.extend(["--run-id", layout.run_id])
+    command_invoked = " ".join(command_parts)
     result = SimulationEngine().run(
         prepared.normalized_case,
-        load_simulation_config(simulation_config_path),
+        simulation_config,
     )
     result.run_id = layout.run_id
     if result.tables.get("run_summary"):
@@ -90,7 +103,10 @@ def execute(
     result.artifacts["normalized_case"] = str(normalized_path)
     result_path = layout.simulation_results_dir / "simulation_result.json"
 
-    csv_artifacts: list[ArtifactRecord] = []
+    artifact_records: list[ArtifactRecord] = [
+        ArtifactRecord(name="normalized_case", path=str(normalized_path), kind="json"),
+        ArtifactRecord(name="simulation_result", path=str(result_path), kind="json"),
+    ]
     csv_manifest_entries: list[dict[str, object]] = []
     if output_config.write_json:
         write_json_artifact(result, result_path)
@@ -115,7 +131,7 @@ def execute(
                 directory / filename,
                 fieldnames=SIMULATION_TABLE_FIELDS.get(table_name),
             )
-            csv_artifacts.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
+            artifact_records.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
             csv_manifest_entries.append(
                 {
                     "table_name": table_name,
@@ -134,7 +150,7 @@ def execute(
             simulation_stream_rows(result),
             layout.simulation_results_dir / SIMULATION_STREAMS_CSV,
         )
-        csv_artifacts.extend(
+        artifact_records.extend(
             [
                 ArtifactRecord(name=SIMULATION_DETAILS_CSV, path=str(legacy_detail_path), kind="csv"),
                 ArtifactRecord(name=SIMULATION_STREAMS_CSV, path=str(legacy_stream_path), kind="csv"),
@@ -142,15 +158,6 @@ def execute(
         )
     if output_config.write_json and output_config.write_metadata:
         manifest_path = layout.metadata_dir / "simulation_manifest.json"
-        write_run_metadata(
-            {
-                "pipeline": "simulate",
-                "case_id": result.case_id,
-                "run_id": layout.run_id,
-                "schema_version": SIMULATION_SCHEMA_VERSION,
-            },
-            layout.metadata_dir / "run_metadata.json",
-        )
         write_json_artifact(
             _build_simulation_manifest(
                 case_id=result.case_id,
@@ -161,14 +168,70 @@ def execute(
             ),
             manifest_path,
         )
-        write_artifact_index(
+        artifact_records.extend(
             [
-                ArtifactRecord(name="normalized_case", path=str(normalized_path), kind="json"),
-                ArtifactRecord(name="simulation_result", path=str(result_path), kind="json"),
                 ArtifactRecord(name="simulation_manifest", path=str(manifest_path), kind="json"),
-                *csv_artifacts,
-            ],
-            layout.metadata_dir / "artifact_index.json",
+            ]
+        )
+        run_manifest_paths = write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="simulate",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=prepared.normalized_case.metadata.name,
+                case_path=prepared.case_directory,
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "simulation": snapshot_config(
+                        config=simulation_config,
+                        source_path=simulation_config_path,
+                    ),
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"simulation_schema_version": SIMULATION_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
+        )
+        artifact_records.extend(
+            [
+                ArtifactRecord(name="run_manifest", path=str(run_manifest_paths["run_manifest"]), kind="json"),
+                ArtifactRecord(name="run_metadata", path=str(run_manifest_paths["run_metadata"]), kind="json"),
+            ]
+        )
+        artifact_index_path = write_artifact_index(artifact_records, layout.metadata_dir / "artifact_index.json")
+        artifact_records.append(ArtifactRecord(name="artifact_index", path=str(artifact_index_path), kind="json"))
+        write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="simulate",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=prepared.normalized_case.metadata.name,
+                case_path=prepared.case_directory,
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "simulation": snapshot_config(
+                        config=simulation_config,
+                        source_path=simulation_config_path,
+                    ),
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"simulation_schema_version": SIMULATION_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
         )
     if output_config.write_trace_csv and result.trace_rows:
         write_csv_artifact(result.trace_rows, layout.simulation_traces_dir / "simulation_trace.csv")

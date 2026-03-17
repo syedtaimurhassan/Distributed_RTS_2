@@ -22,7 +22,11 @@ from drts_tsn.io.paths import outputs_root
 from drts_tsn.output.artifact_index import ArtifactRecord, write_artifact_index
 from drts_tsn.output.csv_writers import write_csv_artifact
 from drts_tsn.output.json_writers import write_json_artifact
-from drts_tsn.output.metadata_writer import write_run_metadata
+from drts_tsn.output.metadata_writer import (
+    build_run_manifest,
+    snapshot_config,
+    write_run_manifest_bundle,
+)
 from drts_tsn.output.run_layout import RunLayout, create_run_layout
 from drts_tsn.output.writers import load_output_config
 from drts_tsn.reporting.csv_catalog import (
@@ -116,6 +120,7 @@ def _write_comparison_artifacts(
     output_config_path: Path | None,
     simulation_result_path: Path,
     analysis_result_path: Path,
+    command_invoked: str,
     write_metadata: bool,
 ) -> None:
     """Write comparison artifacts into a prepared run layout."""
@@ -127,7 +132,11 @@ def _write_comparison_artifacts(
         {**row, "run_id": layout.run_id} for row in result.tables["aggregate_comparison"]
     ]
 
-    csv_artifacts: list[ArtifactRecord] = []
+    artifact_records: list[ArtifactRecord] = [
+        ArtifactRecord(name="simulation_input", path=str(simulation_result_path), kind="json"),
+        ArtifactRecord(name="analysis_input", path=str(analysis_result_path), kind="json"),
+        ArtifactRecord(name="comparison_result", path=str(result_path), kind="json"),
+    ]
     csv_manifest_entries: list[dict[str, object]] = []
 
     if output_config.write_json:
@@ -146,7 +155,7 @@ def _write_comparison_artifacts(
                 layout.comparison_results_dir / filename,
                 fieldnames=COMPARISON_TABLE_FIELDS.get(table_name),
             )
-            csv_artifacts.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
+            artifact_records.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
             csv_manifest_entries.append(
                 {
                     "table_name": table_name,
@@ -158,15 +167,6 @@ def _write_comparison_artifacts(
             )
     if output_config.write_json and output_config.write_metadata and write_metadata:
         manifest_path = layout.metadata_dir / "comparison_manifest.json"
-        write_run_metadata(
-            {
-                "pipeline": "compare",
-                "case_id": result.case_id,
-                "run_id": layout.run_id,
-                "schema_version": COMPARISON_SCHEMA_VERSION,
-            },
-            layout.metadata_dir / "run_metadata.json",
-        )
         write_json_artifact(
             _build_comparison_manifest(
                 case_id=result.case_id,
@@ -178,23 +178,58 @@ def _write_comparison_artifacts(
             ),
             manifest_path,
         )
-        write_artifact_index(
+        artifact_records.append(ArtifactRecord(name="comparison_manifest", path=str(manifest_path), kind="json"))
+        run_manifest_paths = write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="compare",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=result.case_id,
+                case_path=Path(analysis_result_path),
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"comparison_schema_version": COMPARISON_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
+        )
+        artifact_records.extend(
             [
-                ArtifactRecord(
-                    name="simulation_input",
-                    path=str(simulation_result_path),
-                    kind="json",
-                ),
-                ArtifactRecord(
-                    name="analysis_input",
-                    path=str(analysis_result_path),
-                    kind="json",
-                ),
-                ArtifactRecord(name="comparison_result", path=str(result_path), kind="json"),
-                ArtifactRecord(name="comparison_manifest", path=str(manifest_path), kind="json"),
-                *csv_artifacts,
-            ],
-            layout.metadata_dir / "artifact_index.json",
+                ArtifactRecord(name="run_manifest", path=str(run_manifest_paths["run_manifest"]), kind="json"),
+                ArtifactRecord(name="run_metadata", path=str(run_manifest_paths["run_metadata"]), kind="json"),
+            ]
+        )
+        artifact_index_path = write_artifact_index(artifact_records, layout.metadata_dir / "artifact_index.json")
+        artifact_records.append(ArtifactRecord(name="artifact_index", path=str(artifact_index_path), kind="json"))
+        write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="compare",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=result.case_id,
+                case_path=Path(analysis_result_path),
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"comparison_schema_version": COMPARISON_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
         )
 
 
@@ -217,12 +252,24 @@ def execute(
         symlink_latest=load_output_config(output_config_path).symlink_latest,
     )
     result = ComparisonEngine().run(simulation_result, analysis_result)
+    command_parts = [
+        "compare",
+        "--simulation-result",
+        str(simulation_result_path),
+        "--analysis-result",
+        str(analysis_result_path),
+    ]
+    if output_config_path is not None:
+        command_parts.extend(["--output-config", str(output_config_path)])
+    if run_id is not None:
+        command_parts.extend(["--run-id", layout.run_id])
     _write_comparison_artifacts(
         result=result,
         layout=layout,
         output_config_path=output_config_path,
         simulation_result_path=simulation_result_path,
         analysis_result_path=analysis_result_path,
+        command_invoked=" ".join(command_parts),
         write_metadata=write_metadata,
     )
     return result, layout

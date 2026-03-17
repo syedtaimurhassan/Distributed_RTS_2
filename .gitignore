@@ -27,8 +27,10 @@ htmlcov/
 
 # Outputs
 outputs/runs/*
+outputs/batches/*
 outputs/baselines/*
 !outputs/runs/.gitkeep
+!outputs/batches/.gitkeep
 !outputs/baselines/.gitkeep
 
 # IDEs

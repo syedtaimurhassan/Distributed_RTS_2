@@ -57,10 +57,17 @@ case "${1:-help}" in
     ;;
   batch)
     BATCH_OPERATION="${BATCH_OPERATION:-run-case}"
-    run_cli batch-run "$CASES_ROOT" --operation "$BATCH_OPERATION"
+    batch_args=(batch-run "$CASES_ROOT" --operation "$BATCH_OPERATION")
+    [[ -n "${BATCH_ID:-}" ]] && batch_args+=(--batch-id "$BATCH_ID")
+    [[ -n "${OUTPUT_ROOT:-}" ]] && batch_args+=(--output-root "$OUTPUT_ROOT")
+    [[ -n "${ANALYSIS_CONFIG:-}" ]] && batch_args+=(--analysis-config "$ANALYSIS_CONFIG")
+    [[ -n "${SIMULATION_CONFIG:-}" ]] && batch_args+=(--simulation-config "$SIMULATION_CONFIG")
+    [[ -n "${OUTPUT_CONFIG:-}" ]] && batch_args+=(--output-config "$OUTPUT_CONFIG")
+    run_cli "${batch_args[@]}"
     ;;
   clean)
-    find "$ROOT_DIR/outputs/runs" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+    [[ -d "$ROOT_DIR/outputs/runs" ]] && find "$ROOT_DIR/outputs/runs" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
+    [[ -d "$ROOT_DIR/outputs/batches" ]] && find "$ROOT_DIR/outputs/batches" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
     ;;
   help|--help|-h|*)
     cat <<'EOF'
@@ -77,7 +84,7 @@ Commands:
   compare    Compare the latest analysis and simulation run results
   run        Run analyze + simulate + compare for the default case
   batch      Run a selected operation over all discovered case directories
-  clean      Remove generated run directories
+  clean      Remove generated run and batch directories
 EOF
     ;;
 esac

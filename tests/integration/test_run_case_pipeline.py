@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from drts_tsn.io.json_io import read_json
 from drts_tsn.orchestration.pipeline_run_case import execute
 
 
@@ -21,3 +22,8 @@ def test_run_case_pipeline_writes_expected_artifacts(sample_case_path, tmp_path)
     assert (layout.comparison_results_dir / "stream_comparison.csv").exists()
     assert (layout.comparison_results_dir / "aggregate_comparison.csv").exists()
     assert (layout.comparison_results_dir / "comparison_diagnostics.csv").exists()
+    run_manifest_json = read_json(layout.metadata_dir / "run_manifest.json")
+    assert run_manifest_json["pipeline"] == "run-case"
+    assert run_manifest_json["case"]["case_path"]
+    assert run_manifest_json["config_snapshot"]["analysis"]["values"]["strict_validation"] is True
+    assert (layout.metadata_dir / "artifact_index.json").exists()

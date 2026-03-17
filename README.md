@@ -63,6 +63,44 @@ The CLI contains wiring only. Business logic lives in orchestration, adapters, v
 ./make.sh batch
 ```
 
+Useful environment overrides for the shell entrypoints include `CASE_DIR`, `CASES_ROOT`, `BATCH_OPERATION`, `BATCH_ID`, `OUTPUT_ROOT`, `ANALYSIS_CONFIG`, `SIMULATION_CONFIG`, and `OUTPUT_CONFIG`.
+
+For an editable install and the `drts` console script:
+
+```bash
+./make.sh setup
+. .venv/bin/activate
+drts --help
+```
+
+## Run Examples
+
+Run one case end-to-end:
+
+```bash
+python -m drts_tsn.cli.main run-case cases/external/test-case-1 --run-id demo-run
+```
+
+Run the stages separately:
+
+```bash
+python -m drts_tsn.cli.main validate-case cases/external/test-case-1
+python -m drts_tsn.cli.main analyze cases/external/test-case-1 --run-id demo-analysis
+python -m drts_tsn.cli.main simulate cases/external/test-case-1 --run-id demo-simulation
+python -m drts_tsn.cli.main compare \
+  --analysis-result outputs/runs/demo-analysis/analysis/results/analysis_result.json \
+  --simulation-result outputs/runs/demo-simulation/simulation/results/simulation_result.json \
+  --run-id demo-compare
+```
+
+Run all discovered cases under a root:
+
+```bash
+python -m drts_tsn.cli.main batch-run cases/external --operation run-case --batch-id demo-batch
+```
+
+Single-run artifacts are written under `outputs/runs/<run-id>/...`. Batch catalogs, failure diagnostics, and batch metadata are written under `outputs/batches/<batch-id>/...`.
+
 For local development without installation, `sitecustomize.py` injects `src/` into `sys.path` so `python -m drts_tsn.cli.main --help` works from the repository root.
 
 ## Status

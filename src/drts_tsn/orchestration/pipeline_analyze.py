@@ -14,7 +14,11 @@ from drts_tsn.io.paths import outputs_root
 from drts_tsn.output.artifact_index import ArtifactRecord, write_artifact_index
 from drts_tsn.output.csv_writers import write_csv_artifact
 from drts_tsn.output.json_writers import write_json_artifact
-from drts_tsn.output.metadata_writer import write_run_metadata
+from drts_tsn.output.metadata_writer import (
+    build_run_manifest,
+    snapshot_config,
+    write_run_manifest_bundle,
+)
 from drts_tsn.output.run_layout import RunLayout, create_run_layout
 from drts_tsn.output.writers import load_output_config
 from drts_tsn.reporting.csv_catalog import (
@@ -75,6 +79,14 @@ def execute(
     normalized_path = export_prepared_case(
         prepared, layout.normalized_dir / f"{prepared.normalized_case.metadata.case_id}.json"
     )
+    command_parts = ["analyze", str(prepared.case_directory)]
+    if analysis_config_path is not None:
+        command_parts.extend(["--analysis-config", str(analysis_config_path)])
+    if output_config_path is not None:
+        command_parts.extend(["--output-config", str(output_config_path)])
+    if run_id is not None:
+        command_parts.extend(["--run-id", layout.run_id])
+    command_invoked = " ".join(command_parts)
     result = AnalysisEngine().run(prepared.normalized_case, analysis_config)
     result.run_id = layout.run_id
     if result.tables.get("run_summary"):
@@ -88,7 +100,10 @@ def execute(
     result.artifacts["normalized_case"] = str(normalized_path)
     result_path = layout.analysis_results_dir / "analysis_result.json"
 
-    csv_artifacts: list[ArtifactRecord] = []
+    artifact_records: list[ArtifactRecord] = [
+        ArtifactRecord(name="normalized_case", path=str(normalized_path), kind="json"),
+        ArtifactRecord(name="analysis_result", path=str(result_path), kind="json"),
+    ]
     csv_manifest_entries: list[dict[str, object]] = []
     if output_config.write_json:
         write_json_artifact(result, result_path)
@@ -112,7 +127,7 @@ def execute(
                 directory / filename,
                 fieldnames=ANALYSIS_TABLE_FIELDS.get(table_name),
             )
-            csv_artifacts.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
+            artifact_records.append(ArtifactRecord(name=filename, path=str(path), kind="csv"))
             csv_manifest_entries.append(
                 {
                     "table_name": table_name,
@@ -124,15 +139,6 @@ def execute(
             )
     if output_config.write_json and output_config.write_metadata:
         manifest_path = layout.metadata_dir / "analysis_manifest.json"
-        write_run_metadata(
-            {
-                "pipeline": "analyze",
-                "case_id": result.case_id,
-                "run_id": layout.run_id,
-                "schema_version": ANALYSIS_SCHEMA_VERSION,
-            },
-            layout.metadata_dir / "run_metadata.json",
-        )
         write_json_artifact(
             _build_analysis_manifest(
                 case_id=result.case_id,
@@ -143,14 +149,66 @@ def execute(
             ),
             manifest_path,
         )
-        write_artifact_index(
+        artifact_records.append(ArtifactRecord(name="analysis_manifest", path=str(manifest_path), kind="json"))
+        run_manifest_paths = write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="analyze",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=prepared.normalized_case.metadata.name,
+                case_path=prepared.case_directory,
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "analysis": snapshot_config(
+                        config=analysis_config,
+                        source_path=analysis_config_path,
+                    ),
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"analysis_schema_version": ANALYSIS_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
+        )
+        artifact_records.extend(
             [
-                ArtifactRecord(name="normalized_case", path=str(normalized_path), kind="json"),
-                ArtifactRecord(name="analysis_result", path=str(result_path), kind="json"),
-                ArtifactRecord(name="analysis_manifest", path=str(manifest_path), kind="json"),
-                *csv_artifacts,
-            ],
-            layout.metadata_dir / "artifact_index.json",
+                ArtifactRecord(name="run_manifest", path=str(run_manifest_paths["run_manifest"]), kind="json"),
+                ArtifactRecord(name="run_metadata", path=str(run_manifest_paths["run_metadata"]), kind="json"),
+            ]
+        )
+        artifact_index_path = write_artifact_index(artifact_records, layout.metadata_dir / "artifact_index.json")
+        artifact_records.append(ArtifactRecord(name="artifact_index", path=str(artifact_index_path), kind="json"))
+        write_run_manifest_bundle(
+            build_run_manifest(
+                pipeline="analyze",
+                run_id=layout.run_id,
+                run_dir=layout.run_dir,
+                status="success",
+                pipeline_status=str(result.summary.get("engine_status")),
+                case_id=result.case_id,
+                case_name=prepared.normalized_case.metadata.name,
+                case_path=prepared.case_directory,
+                command_invoked=command_invoked,
+                config_snapshot={
+                    "analysis": snapshot_config(
+                        config=analysis_config,
+                        source_path=analysis_config_path,
+                    ),
+                    "output": snapshot_config(
+                        config=output_config,
+                        source_path=output_config_path,
+                    ),
+                },
+                artifact_records=artifact_records,
+                extra={"analysis_schema_version": ANALYSIS_SCHEMA_VERSION},
+            ),
+            metadata_dir=layout.metadata_dir,
         )
     if output_config.write_trace_csv and result.trace_rows:
         write_csv_artifact(result.trace_rows, layout.analysis_traces_dir / "analysis_trace.csv")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import uuid
@@ -414,3 +415,42 @@ def test_batch_run_command_runs_for_external_cases_root(repo_root, sample_case_p
     assert completed.returncode == 0
     assert "case_count" in completed.stdout
     assert "test-case-1" in completed.stdout
+
+
+def test_batch_run_command_reports_partial_failure_but_continues(
+    repo_root,
+    sample_case_path,
+    invalid_case_path,
+    tmp_path: Path,
+) -> None:
+    """The batch command should continue after one case fails and report the failure count."""
+
+    cases_root = tmp_path / "cases"
+    cases_root.mkdir()
+    shutil.copytree(invalid_case_path, cases_root / "01-invalid-case")
+    shutil.copytree(sample_case_path, cases_root / "02-valid-case")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "batch-run",
+            str(cases_root),
+            "--operation",
+            "run-case",
+            "--batch-id",
+            "cli-batch-mixed",
+            "--output-root",
+            str(tmp_path / "outputs"),
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 4
+    assert "failure_count" in completed.stdout
+    assert "01-invalid-case" in completed.stdout
+    assert "02-valid-case" in completed.stdout
