@@ -9,8 +9,12 @@ from drts_tsn.cli.presenters.console_messages import print_error, print_info
 from drts_tsn.cli.presenters.console_tables import render_mapping
 from drts_tsn.cli.presenters.exit_codes import ExitCode
 from drts_tsn.io.paths import project_root
-from drts_tsn.orchestration.run_manager import export_prepared_case_bundle, prepare_case
-from drts_tsn.validation.errors import CaseValidationError
+from drts_tsn.orchestration.run_manager import (
+    assert_case_readiness,
+    export_prepared_case_bundle,
+    prepare_case,
+)
+from drts_tsn.validation.errors import CaseReadinessError, CaseValidationError
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -32,7 +36,7 @@ def handle(args: argparse.Namespace) -> int:
 
     try:
         prepared = prepare_case(args.case_path)
-        prepared.validation_report.raise_for_errors()
+        assert_case_readiness(prepared, stage="normalization")
         destination_directory = args.output_dir or (
             project_root() / "cases" / "normalized" / prepared.normalized_case.metadata.case_id
         )
@@ -53,6 +57,9 @@ def handle(args: argparse.Namespace) -> int:
     except CaseValidationError as exc:
         print_error(str(exc))
         print_info(render_mapping({"validation_issue_count": len(exc.report.issues)}))
+        return ExitCode.VALIDATION_FAILED
+    except CaseReadinessError as exc:
+        print_error(str(exc))
         return ExitCode.VALIDATION_FAILED
     except Exception as exc:  # noqa: BLE001
         print_error(str(exc))

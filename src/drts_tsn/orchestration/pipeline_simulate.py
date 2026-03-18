@@ -39,7 +39,7 @@ from drts_tsn.simulation.outputs.simulation_result_builder import (
     SIMULATION_TABLE_FIELDS,
 )
 
-from .run_manager import export_prepared_case, prepare_case
+from .run_manager import assert_case_readiness, export_prepared_case, prepare_case
 
 
 def _build_simulation_manifest(
@@ -74,7 +74,7 @@ def execute(
     """Run the baseline simulation pipeline for one case."""
 
     prepared = prepare_case(case_path)
-    prepared.validation_report.raise_for_errors()
+    assert_case_readiness(prepared, stage="simulation")
     output_config = load_output_config(output_config_path)
     layout = create_run_layout(
         output_root or outputs_root(),

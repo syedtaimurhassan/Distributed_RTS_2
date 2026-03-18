@@ -7,6 +7,8 @@ from drts_tsn.domain.credits import CreditParameters
 from drts_tsn.domain.enums import NodeType
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.queues import QueueDefinition
+from drts_tsn.domain.routes import Route, RouteHop
+from drts_tsn.domain.streams import Stream
 from drts_tsn.domain.topology import Link, Node, Topology
 from drts_tsn.orchestration.run_manager import prepare_case
 from drts_tsn.simulation.config import SimulationConfig
@@ -92,6 +94,30 @@ def test_credit_update_lookup_does_not_depend_on_queue_id_delimiter() -> None:
             QueueDefinition(traffic_class=TrafficClass.CLASS_B, priority=1, uses_cbs=True),
             QueueDefinition(traffic_class=TrafficClass.BEST_EFFORT, priority=0, uses_cbs=False),
         ],
+        streams=[
+            Stream(
+                id="stream-alpha",
+                name="stream-alpha",
+                source_node_id="talker",
+                destination_node_id="listener",
+                traffic_class=TrafficClass.CLASS_A,
+                period_us=1000.0,
+                deadline_us=1000.0,
+                max_frame_size_bytes=128,
+                route_id="route-alpha",
+                priority=2,
+            )
+        ],
+        routes=[
+            Route(
+                route_id="route-alpha",
+                stream_id="stream-alpha",
+                hops=[
+                    RouteHop(node_id="talker", link_id="link:alpha"),
+                    RouteHop(node_id="listener"),
+                ],
+            )
+        ],
     )
     context = build_simulation_context(case, SimulationConfig())
     queue_id = context.queue_ids_by_port_and_class[("link:alpha", TrafficClass.CLASS_A)]
@@ -105,12 +131,13 @@ def test_credit_update_lookup_does_not_depend_on_queue_id_delimiter() -> None:
     assert context.network_state.ports["link:alpha"].queues[queue_id].scheduled_credit_update_time_us is None
 
 
-def test_build_simulation_context_supports_full_duplex_assignment_case(repo_root) -> None:
-    """Context construction should accept the provided full-duplex line case."""
+def test_build_simulation_context_uses_only_links_traversed_by_active_routes(repo_root) -> None:
+    """Context construction should allocate runtime ports only for active directed route links."""
 
     prepared = prepare_case(repo_root / "cases" / "external" / "test-case-1")
     context = build_simulation_context(prepared.normalized_case, SimulationConfig())
 
-    expected_port_ids = {link.id for link in prepared.normalized_case.topology.links}
+    expected_port_ids = {"link2", "link3", "link4", "link5"}
     assert set(context.network_state.ports) == expected_port_ids
-    assert {"link2", "link3", "link4", "link5"}.issubset(expected_port_ids)
+    assert "link0" not in context.network_state.ports
+    assert "link1" not in context.network_state.ports

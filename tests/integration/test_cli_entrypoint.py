@@ -61,6 +61,8 @@ def test_validate_case_command_runs_for_sample_case(repo_root, sample_case_path)
     )
 
     assert completed.returncode == 0
+    assert "selected_stage" in completed.stdout
+    assert "normalization_valid" in completed.stdout
     assert "Validation passed with no issues." in completed.stdout
 
 
@@ -94,6 +96,50 @@ def test_validate_case_command_fails_cleanly_for_invalid_fixture(repo_root, inva
 
     assert completed.returncode == 2
     assert "routes.hop.unknown-node" in completed.stdout
+
+
+def test_validate_case_stage_analysis_catches_hidden_analysis_precondition_failure(
+    repo_root,
+    invalid_reserved_bandwidth_case_path,
+) -> None:
+    """Readiness-stage validation should expose analysis-only failures before running analyze."""
+
+    normalization_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "validate-case",
+            str(invalid_reserved_bandwidth_case_path),
+            "--stage",
+            "normalization",
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    analysis_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "validate-case",
+            str(invalid_reserved_bandwidth_case_path),
+            "--stage",
+            "analysis",
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert normalization_completed.returncode == 0
+    assert "selected_stage_valid" in normalization_completed.stdout
+    assert "analysis_ready" in normalization_completed.stdout
+    assert analysis_completed.returncode == 5
+    assert "analysis.reserved-bandwidth.exceeded" in analysis_completed.stdout
 
 
 def test_validate_case_command_returns_validation_failure_for_missing_required_file(
@@ -229,7 +275,8 @@ def test_analyze_command_fails_cleanly_for_reserved_bandwidth_violation(
         text=True,
     )
 
-    assert completed.returncode == 2
+    assert completed.returncode == 5
+    assert "Case readiness failed for stage 'analysis'" in completed.stderr
     assert "analysis.reserved-bandwidth.exceeded" in completed.stderr
     assert "stream-a:link-1" in completed.stderr
 
@@ -426,6 +473,63 @@ def test_run_case_command_writes_end_to_end_artifacts(repo_root, sample_case_pat
     assert (run_root / "simulation" / "results" / "simulation_result.json").exists()
     assert (run_root / "comparison" / "results" / "comparison_result.json").exists()
     assert (run_root / "comparison" / "results" / "stream_comparison.csv").exists()
+
+
+def test_readme_recommended_example_case_flow_is_executable(
+    repo_root,
+    tmp_path: Path,
+) -> None:
+    """README recommended command sequence should run on the provided assignment case."""
+
+    case_path = repo_root / "cases" / "external" / "test-case-1"
+    run_id = f"readme-flow-{uuid.uuid4().hex}"
+    normalize_output_dir = tmp_path / "readme-normalized"
+    commands = [
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "validate-case",
+            str(case_path),
+            "--stage",
+            "analysis",
+        ],
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "normalize-case",
+            str(case_path),
+            "--output-dir",
+            str(normalize_output_dir),
+        ],
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "run-case",
+            str(case_path),
+            "--run-id",
+            run_id,
+        ],
+    ]
+    completed_runs = [
+        subprocess.run(
+            command,
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        for command in commands
+    ]
+
+    assert all(completed.returncode == 0 for completed in completed_runs)
+    assert (normalize_output_dir / "normalized_case.json").exists()
+    run_root = repo_root / "outputs" / "runs" / run_id
+    assert (run_root / "analysis" / "results" / "analysis_result.json").exists()
+    assert (run_root / "simulation" / "results" / "simulation_result.json").exists()
+    assert (run_root / "comparison" / "results" / "comparison_result.json").exists()
 
 
 def test_batch_run_command_runs_for_external_cases_root(repo_root, sample_case_path) -> None:

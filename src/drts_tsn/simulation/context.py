@@ -8,7 +8,7 @@ from drts_tsn.common.constants import DEFAULT_LINK_SPEED_MBPS
 from drts_tsn.common.math_utils import integer_hyperperiod
 from drts_tsn.domain.case import Case
 from drts_tsn.domain.enums import TrafficClass
-from drts_tsn.domain.routes import route_link_ids
+from drts_tsn.domain.routes import active_route_link_ids, route_link_ids_by_stream
 from drts_tsn.domain.streams import Stream
 from drts_tsn.domain.topology import Link
 
@@ -60,14 +60,27 @@ def build_simulation_context(case: Case, config: SimulationConfig) -> Simulation
     """Construct the mutable runtime state and immutable lookups for one run."""
 
     streams_by_id = {stream.id: stream for stream in case.streams}
-    route_links_by_stream_id = {
-        route.stream_id: route_link_ids(route)
-        for route in case.routes
-    }
+    route_links_by_stream_id = route_link_ids_by_stream(case.routes)
     link_by_id = {link.id: link for link in case.topology.links}
+    active_route_link_id_set = active_route_link_ids(case.routes)
+    if not active_route_link_id_set:
+        raise ValueError("Simulation requires at least one directed link used by active routes.")
+    unresolved_active_links = sorted(link_id for link_id in active_route_link_id_set if link_id not in link_by_id)
+    if unresolved_active_links:
+        raise ValueError(
+            "Simulation route resolution references unknown topology links: "
+            + ",".join(unresolved_active_links)
+        )
+    active_links = [link_by_id[link_id] for link_id in sorted(active_route_link_id_set)]
+    empty_stream_paths = sorted(stream_id for stream_id, path_link_ids in route_links_by_stream_id.items() if not path_link_ids)
+    if empty_stream_paths:
+        raise ValueError(
+            "Simulation requires resolved directed paths for all routed streams; empty paths for: "
+            + ",".join(empty_stream_paths)
+        )
     network_state = NetworkState()
     queue_ids_by_port_and_class: dict[tuple[str, TrafficClass], str] = {}
-    for link in sorted(case.topology.links, key=lambda item: item.id):
+    for link in active_links:
         port_id = link.id
         queues: dict[str, QueueState] = {}
         credits: dict[str, CreditState] = {}

@@ -35,6 +35,10 @@ case "${1:-help}" in
   validate)
     run_cli validate-case "$CASE_DIR"
     ;;
+  readiness)
+    READINESS_STAGE="${READINESS_STAGE:-analysis}"
+    run_cli validate-case "$CASE_DIR" --stage "$READINESS_STAGE"
+    ;;
   normalize)
     run_cli normalize-case "$CASE_DIR"
     ;;
@@ -77,6 +81,7 @@ Commands:
   setup      Create .venv and install dependencies
   test       Run pytest
   validate   Validate the default case
+  readiness  Validate default case run readiness (set READINESS_STAGE)
   normalize  Normalize the default case
   inspect    Inspect the default case
   analyze    Run baseline AVB analysis on the default case

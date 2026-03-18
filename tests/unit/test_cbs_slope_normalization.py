@@ -92,3 +92,45 @@ def test_analysis_preconditions_fail_when_cumulative_reserved_share_exceeds_one(
 
     issues = validate_analysis_preconditions(invalid_case)
     assert any(issue.code == "analysis.reserved-bandwidth.exceeded" for issue in issues)
+
+
+def test_precondition_diagnostics_report_per_link_effective_mbps_from_shared_reservation(repo_root) -> None:
+    """Diagnostics should derive effective Mbps per link from one canonical normalized share."""
+
+    prepared = prepare_case(
+        repo_root / "cases" / "external" / "test-case-1",
+        include_analysis_checks=True,
+    )
+    invalid_case = deepcopy(prepared.normalized_case)
+    link_speed_overrides = {"link5": 100.0, "link2": 1000.0}
+    invalid_case.topology.links = [
+        replace(
+            link,
+            speed_mbps=link_speed_overrides.get(link.id, link.speed_mbps),
+        )
+        for link in invalid_case.topology.links
+    ]
+    invalid_case.queues = [
+        replace(
+            queue,
+            credit_parameters=replace(
+                queue.credit_parameters,
+                idle_slope_share=1.2,
+                send_slope_share=1.2,
+                idle_slope_mbps=120.0,
+                send_slope_mbps=120.0,
+            ),
+        )
+        if queue.traffic_class == TrafficClass.CLASS_A and queue.credit_parameters is not None
+        else queue
+        for queue in invalid_case.queues
+    ]
+
+    issues = validate_analysis_preconditions(invalid_case)
+    reserved_issues = [issue for issue in issues if issue.code == "analysis.reserved-bandwidth.exceeded"]
+
+    assert len(reserved_issues) >= 2
+    issue_link_1 = next(issue for issue in reserved_issues if issue.location == "stream-0:link5")
+    issue_link_2 = next(issue for issue in reserved_issues if issue.location == "stream-0:link2")
+    assert "effective_idle_slope_mbps=120.000000 at link_speed_mbps=100.000000" in issue_link_1.message
+    assert "effective_idle_slope_mbps=1200.000000 at link_speed_mbps=1000.000000" in issue_link_2.message

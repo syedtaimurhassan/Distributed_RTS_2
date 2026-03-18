@@ -15,6 +15,18 @@ def test_parser_registers_validate_case_command() -> None:
     assert callable(args.handler)
 
 
+def test_parser_registers_validate_case_stage_option() -> None:
+    """The parser should accept the readiness stage selector for validate-case."""
+
+    parser = build_parser()
+    args = parser.parse_args(
+        ["validate-case", "cases/external/test-case-1", "--stage", "analysis"]
+    )
+    assert args.command == "validate-case"
+    assert args.stage == "analysis"
+    assert callable(args.handler)
+
+
 def test_parser_registers_analyze_command() -> None:
     """The parser should wire the Milestone 2 analyze command."""
 

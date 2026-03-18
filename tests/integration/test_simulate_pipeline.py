@@ -46,3 +46,40 @@ def test_simulate_pipeline_writes_required_artifacts(
     )
     assert len(response_rows) == 1
     assert response_rows[0]["stream_id"] == "stream-a"
+
+
+def test_simulate_pipeline_runs_assignment_case_end_to_end(
+    repo_root,
+    tmp_path,
+    assert_csv_contract,
+) -> None:
+    """The provided assignment case should complete simulation and emit response-time summaries."""
+
+    result, layout = execute(
+        repo_root / "cases" / "external" / "test-case-1",
+        output_root=tmp_path,
+        run_id="simulate-assignment-case",
+    )
+
+    assert result.summary["engine_status"] == "ok"
+    assert result.tables["response_time_trace"]
+    assert result.tables["stream_summary"]
+
+    response_rows = assert_csv_contract(
+        layout.simulation_traces_dir / "response_time_trace.csv",
+        SIMULATION_TABLE_FIELDS["response_time_trace"],
+    )
+    stream_rows = assert_csv_contract(
+        layout.simulation_results_dir / "stream_summary.csv",
+        SIMULATION_TABLE_FIELDS["stream_summary"],
+    )
+    run_rows = assert_csv_contract(
+        layout.simulation_results_dir / "run_summary.csv",
+        SIMULATION_TABLE_FIELDS["run_summary"],
+    )
+
+    assert len(stream_rows) == 10
+    assert len(response_rows) == 10
+    assert all(float(row["response_time_us"]) >= 0.0 for row in response_rows)
+    assert int(run_rows[0]["delivered_frame_count"]) == len(response_rows)
+    assert run_rows[0]["stop_reason"] == "delivery_target_reached"

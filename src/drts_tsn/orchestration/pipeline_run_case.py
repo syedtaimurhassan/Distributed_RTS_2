@@ -51,7 +51,7 @@ from drts_tsn.simulation.engine import SimulationEngine
 from drts_tsn.simulation.outputs.simulation_result_builder import SIMULATION_TABLE_FIELDS
 
 from .pipeline_compare import execute as execute_compare
-from .run_manager import export_prepared_case, prepare_case
+from .run_manager import assert_case_readiness, export_prepared_case, prepare_case
 
 
 def _write_analysis_bundle(
@@ -158,7 +158,11 @@ def execute(
     analysis_config = load_analysis_config(analysis_config_path)
     simulation_config = load_simulation_config(simulation_config_path)
     prepared = prepare_case(case_path, include_analysis_checks=analysis_config.strict_validation)
-    prepared.validation_report.raise_for_errors()
+    assert_case_readiness(prepared, stage="simulation")
+    assert_case_readiness(
+        prepared,
+        stage="analysis" if analysis_config.strict_validation else "baseline",
+    )
     output_config = load_output_config(output_config_path)
     layout = create_run_layout(
         output_root or outputs_root(),

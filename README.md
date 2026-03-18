@@ -16,6 +16,14 @@ This repository implements the workflow for the mini-project:
 
 The project is structured so that the normalized internal case model is the single source of truth. External case files are parsed once in the adapter layer, and analysis and simulation both operate on the same canonical domain model.
 
+Validation and execution use explicit readiness stages:
+
+- `schema-valid`: external files can be loaded and parsed
+- `normalization-valid`: canonical topology/routes/streams/queues are structurally valid
+- `baseline-runnable`: baseline assumptions checks pass
+- `simulation-ready`: simulation preconditions pass
+- `analysis-ready`: analysis preconditions pass
+
 ## Repository Layout
 
 ```text
@@ -152,11 +160,29 @@ Available commands:
 
 ### `validate-case`
 
-Validate one external case directory.
+Validate one external case directory at an explicit readiness stage.
 
 ```bash
 drts validate-case cases/external/test-case-1
+drts validate-case cases/external/test-case-1 --stage analysis
 ```
+
+Supported stages:
+
+- `schema`
+- `normalization` (default)
+- `baseline`
+- `simulation`
+- `analysis`
+- `all`
+
+Interpretation:
+
+- `normalization` checks structural validity of the normalized case model
+- `baseline` adds baseline-runnability checks
+- `simulation` adds simulation precondition checks
+- `analysis` adds analysis precondition checks
+- `all` requires all readiness stages to pass
 
 ### `normalize-case`
 
@@ -285,6 +311,7 @@ The repository also provides shell shortcuts:
 ./make.sh setup
 ./make.sh test
 ./make.sh validate
+./make.sh readiness
 ./make.sh normalize
 ./make.sh inspect
 ./make.sh analyze
@@ -300,6 +327,7 @@ Behavior:
 - `setup`: create `.venv`, install dependencies, install the project in editable mode
 - `test`: run `pytest`
 - `validate`, `normalize`, `inspect`, `analyze`, `simulate`, `run`: execute the matching CLI command for `CASE_DIR`
+- `readiness`: run `validate-case --stage $READINESS_STAGE` (default `analysis`)
 - `compare`: compare the latest analysis and simulation outputs unless explicit result paths are provided
 - `batch`: execute `batch-run` for `CASES_ROOT`
 - `clean`: remove generated run and batch artifacts
@@ -307,6 +335,7 @@ Behavior:
 Useful environment overrides:
 
 - `CASE_DIR`
+- `READINESS_STAGE`
 - `CASES_ROOT`
 - `BATCH_OPERATION`
 - `BATCH_ID`
@@ -321,7 +350,18 @@ Example:
 
 ```bash
 CASE_DIR="$PWD/cases/external/test-case-1" ./make.sh analyze
+CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=analysis ./make.sh readiness
 BATCH_OPERATION=run-case BATCH_ID=demo-batch ./make.sh batch
+```
+
+## Recommended Example-Case Workflow
+
+Use this command sequence for the bundled assignment case:
+
+```bash
+drts validate-case cases/external/test-case-1 --stage analysis
+drts normalize-case cases/external/test-case-1 --output-dir /tmp/test-case-1-normalized
+drts run-case cases/external/test-case-1 --run-id demo-run
 ```
 
 ## Configuration
@@ -540,6 +580,5 @@ Current automated coverage includes:
 - Python package name: `drts-mini-project-2`
 - console script: `drts`
 - source layout: `src/`
-
 
 

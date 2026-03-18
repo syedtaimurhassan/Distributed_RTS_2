@@ -12,3 +12,4 @@ class ExitCode(IntEnum):
     VALIDATION_FAILED = 2
     CONFIG_ERROR = 3
     RUNTIME_ERROR = 4
+    READINESS_FAILED = 5

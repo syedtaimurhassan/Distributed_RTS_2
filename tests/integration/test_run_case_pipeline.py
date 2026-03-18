@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from drts_tsn.io.json_io import read_json
 from drts_tsn.orchestration.pipeline_run_case import execute
+from drts_tsn.validation.errors import CaseReadinessError
 
 
 def test_run_case_pipeline_writes_expected_artifacts(sample_case_path, tmp_path) -> None:
@@ -47,3 +50,17 @@ def test_run_case_pipeline_handles_bundled_assignment_case(repo_root, tmp_path) 
     assert comparison_result.summary["missing_simulation_count"] == 0
     assert comparison_result.summary["stream_count"] == 8
     assert (layout.comparison_results_dir / "expected_wcrt_comparison.csv").exists()
+
+
+def test_run_case_pipeline_fails_early_when_analysis_readiness_fails(
+    invalid_reserved_bandwidth_case_path,
+    tmp_path,
+) -> None:
+    """run-case should report readiness failure before executing downstream stages."""
+
+    with pytest.raises(CaseReadinessError, match="stage 'analysis'"):
+        execute(
+            invalid_reserved_bandwidth_case_path,
+            output_root=tmp_path,
+            run_id="run-case-invalid-readiness",
+        )

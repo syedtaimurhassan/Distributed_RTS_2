@@ -7,7 +7,9 @@ from pathlib import Path
 
 from drts_tsn.cli.presenters.console_messages import print_error, print_info
 from drts_tsn.cli.presenters.console_tables import render_mapping
+from drts_tsn.cli.presenters.exit_codes import ExitCode
 from drts_tsn.orchestration.pipeline_run_case import execute
+from drts_tsn.validation.errors import CaseReadinessError, CaseValidationError
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -34,7 +36,16 @@ def handle(args: argparse.Namespace) -> int:
             run_id=args.run_id,
         )
         print_info(render_mapping({"run_id": layout.run_id, "run_dir": layout.run_dir}))
-        return 0
+        return ExitCode.SUCCESS
+    except (FileNotFoundError, ValueError) as exc:
+        print_error(str(exc))
+        return ExitCode.VALIDATION_FAILED
+    except CaseValidationError as exc:
+        print_error(str(exc))
+        return ExitCode.VALIDATION_FAILED
+    except CaseReadinessError as exc:
+        print_error(str(exc))
+        return ExitCode.READINESS_FAILED
     except Exception as exc:  # noqa: BLE001
         print_error(str(exc))
-        return 4
+        return ExitCode.RUNTIME_ERROR

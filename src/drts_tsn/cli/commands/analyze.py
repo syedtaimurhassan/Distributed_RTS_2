@@ -9,7 +9,7 @@ from drts_tsn.cli.presenters.console_messages import print_error, print_info
 from drts_tsn.cli.presenters.console_tables import render_mapping
 from drts_tsn.cli.presenters.exit_codes import ExitCode
 from drts_tsn.orchestration.pipeline_analyze import execute
-from drts_tsn.validation.errors import CaseValidationError
+from drts_tsn.validation.errors import CaseReadinessError, CaseValidationError
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -41,6 +41,9 @@ def handle(args: argparse.Namespace) -> int:
     except CaseValidationError as exc:
         print_error(str(exc))
         return ExitCode.VALIDATION_FAILED
+    except CaseReadinessError as exc:
+        print_error(str(exc))
+        return ExitCode.READINESS_FAILED
     except Exception as exc:  # noqa: BLE001
         print_error(str(exc))
         return ExitCode.RUNTIME_ERROR

@@ -19,7 +19,7 @@ from drts_tsn.reporting.csv_catalog import (
     ANALYSIS_SAME_PRIORITY_TRACE_CSV,
     ANALYSIS_STREAM_WCRT_SUMMARY_CSV,
 )
-from drts_tsn.validation.errors import CaseValidationError
+from drts_tsn.validation.errors import CaseReadinessError
 
 
 def test_analyze_pipeline_writes_required_summary_and_trace_artifacts(
@@ -111,7 +111,7 @@ def test_analyze_pipeline_rejects_invalid_reserved_bandwidth_fixture(
 ) -> None:
     """Strict analysis should fail loudly when reserved-share preconditions are violated."""
 
-    with pytest.raises(CaseValidationError, match="analysis.reserved-bandwidth.exceeded"):
+    with pytest.raises(CaseReadinessError, match="analysis.reserved-bandwidth.exceeded"):
         execute(
             invalid_reserved_bandwidth_case_path,
             output_root=tmp_path,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from drts_tsn.orchestration.run_manager import prepare_case
+from drts_tsn.simulation.config import SimulationConfig
 from drts_tsn.simulation.engine import SimulationEngine
 
 
@@ -32,3 +33,19 @@ def test_simulation_engine_computes_baseline_response(sample_case_path) -> None:
     assert len(result.tables["hop_summary"]) == 2
     assert len(result.tables["queue_summary"]) == 6
     assert result.tables["run_summary"][0]["stop_reason"] == "delivery_target_reached"
+
+
+def test_simulation_engine_honors_delivery_target_stop_condition(repo_root) -> None:
+    """Simulation should stop early once the configured delivery target is reached."""
+
+    prepared = prepare_case(repo_root / "cases" / "external" / "test-case-1")
+    result = SimulationEngine().run(
+        prepared.normalized_case,
+        SimulationConfig(max_releases_per_stream=1, max_deliveries_total=3),
+    )
+
+    run_summary = result.tables["run_summary"][0]
+    assert run_summary["stop_reason"] == "delivery_target_reached"
+    assert int(run_summary["delivered_frame_count"]) >= 3
+    assert int(run_summary["delivered_frame_count"]) < 10
+    assert len(result.tables["response_time_trace"]) == int(run_summary["delivered_frame_count"])

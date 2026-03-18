@@ -69,3 +69,23 @@ class CaseValidationError(Exception):
             message = "Case validation failed: " + "; ".join(report.format_lines())
         super().__init__(message)
         self.report = report
+
+
+class CaseReadinessError(Exception):
+    """Raised when a case fails a requested readiness stage."""
+
+    def __init__(
+        self,
+        *,
+        stage: str,
+        report: ValidationReport,
+        status_mapping: dict[str, bool],
+    ) -> None:
+        status_text = ", ".join(f"{key}={value}" for key, value in status_mapping.items())
+        message = f"Case readiness failed for stage '{stage}'. Statuses: {status_text}."
+        if report.issues:
+            message += " Issues: " + "; ".join(report.format_lines())
+        super().__init__(message)
+        self.stage = stage
+        self.report = report
+        self.status_mapping = status_mapping
