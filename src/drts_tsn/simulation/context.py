@@ -10,7 +10,7 @@ from drts_tsn.domain.case import Case
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.routes import route_link_ids
 from drts_tsn.domain.streams import Stream
-from drts_tsn.domain.topology import Link, ordered_line_links
+from drts_tsn.domain.topology import Link
 
 from .clock import SimulationClock
 from .config import SimulationConfig
@@ -67,7 +67,7 @@ def build_simulation_context(case: Case, config: SimulationConfig) -> Simulation
     link_by_id = {link.id: link for link in case.topology.links}
     network_state = NetworkState()
     queue_ids_by_port_and_class: dict[tuple[str, TrafficClass], str] = {}
-    for link in ordered_line_links(case.topology):
+    for link in sorted(case.topology.links, key=lambda item: item.id):
         port_id = link.id
         queues: dict[str, QueueState] = {}
         credits: dict[str, CreditState] = {}

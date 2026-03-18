@@ -103,3 +103,14 @@ def test_credit_update_lookup_does_not_depend_on_queue_id_delimiter() -> None:
 
     assert scheduled.event_name == SimulationEventType.CREDIT_UPDATE.value
     assert context.network_state.ports["link:alpha"].queues[queue_id].scheduled_credit_update_time_us is None
+
+
+def test_build_simulation_context_supports_full_duplex_assignment_case(repo_root) -> None:
+    """Context construction should accept the provided full-duplex line case."""
+
+    prepared = prepare_case(repo_root / "cases" / "external" / "test-case-1")
+    context = build_simulation_context(prepared.normalized_case, SimulationConfig())
+
+    expected_port_ids = {link.id for link in prepared.normalized_case.topology.links}
+    assert set(context.network_state.ports) == expected_port_ids
+    assert {"link2", "link3", "link4", "link5"}.issubset(expected_port_ids)

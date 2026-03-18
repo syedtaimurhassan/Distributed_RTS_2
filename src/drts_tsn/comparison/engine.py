@@ -41,7 +41,11 @@ def _simulation_stream_rows(result: SimulationRunResult) -> list[dict[str, objec
 
     table_rows = result.tables.get("stream_summary")
     if table_rows is not None:
-        return list(table_rows)
+        return [
+            row
+            for row in table_rows
+            if str(row.get("traffic_class", "")).strip().lower() != "best_effort"
+        ]
     return [
         {
             "stream_id": row.stream_id,

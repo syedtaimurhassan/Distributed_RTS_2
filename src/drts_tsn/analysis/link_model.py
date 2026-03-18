@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from drts_tsn.common.constants import DEFAULT_LINK_SPEED_MBPS
 from drts_tsn.domain.case import Case
+from drts_tsn.domain.credits import idle_slope_share, send_slope_share
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.routes import route_link_ids
 from drts_tsn.domain.streams import Stream
@@ -64,11 +65,10 @@ def _queue_parameters_for_class(
             continue
         if not queue.uses_cbs or queue.credit_parameters is None:
             return queue.priority, 0.0, 0.0
-        send_slope_mbps = queue.credit_parameters.send_slope_mbps or queue.credit_parameters.idle_slope_mbps
         return (
             queue.priority,
-            queue.credit_parameters.idle_slope_mbps / link_speed_mbps,
-            send_slope_mbps / link_speed_mbps,
+            idle_slope_share(queue.credit_parameters),
+            send_slope_share(queue.credit_parameters),
         )
     raise ValueError(f"Missing queue definition for traffic class '{traffic_class.value}'.")
 

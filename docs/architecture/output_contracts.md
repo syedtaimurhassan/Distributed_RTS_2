@@ -1,6 +1,6 @@
 # Output Contracts
 
-The scaffold reserves separate artifact spaces for:
+The project reserves separate artifact spaces for:
 
 - normalized canonical case exports
 - raw subsystem JSON results

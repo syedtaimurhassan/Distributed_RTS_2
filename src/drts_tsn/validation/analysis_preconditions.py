@@ -2,24 +2,65 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from drts_tsn.common.constants import DEFAULT_LINK_SPEED_MBPS
 from drts_tsn.domain.case import Case
+from drts_tsn.domain.credits import (
+    effective_idle_slope_mbps,
+    idle_slope_share,
+    slope_semantics_summary,
+    validate_credit_parameter_consistency,
+)
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.routes import route_link_ids
 
 from .errors import ValidationIssue
 
 
-def _reserved_share_for_class(case: Case, traffic_class: TrafficClass, *, link_speed_mbps: float) -> float:
-    """Return the normalized reserved share for a traffic class on one link."""
+@dataclass(slots=True, frozen=True)
+class ReservedShareComponent:
+    """Per-class reserved-bandwidth contribution on one link."""
+
+    traffic_class: TrafficClass
+    reserved_share: float
+    effective_idle_slope_mbps: float
+    semantics: str
+
+
+def _reserved_component_for_class(
+    case: Case,
+    traffic_class: TrafficClass,
+    *,
+    link_speed_mbps: float,
+) -> ReservedShareComponent:
+    """Return the reserved-share contribution for one class on one link."""
 
     for queue in case.queues:
         if queue.traffic_class != traffic_class:
             continue
         if not queue.uses_cbs or queue.credit_parameters is None:
-            return 0.0
-        return queue.credit_parameters.idle_slope_mbps / link_speed_mbps
-    return 0.0
+            return ReservedShareComponent(
+                traffic_class=traffic_class,
+                reserved_share=0.0,
+                effective_idle_slope_mbps=0.0,
+                semantics="non-cbs",
+            )
+        return ReservedShareComponent(
+            traffic_class=traffic_class,
+            reserved_share=idle_slope_share(queue.credit_parameters),
+            effective_idle_slope_mbps=effective_idle_slope_mbps(
+                queue.credit_parameters,
+                link_speed_mbps=link_speed_mbps,
+            ),
+            semantics=slope_semantics_summary(queue.credit_parameters),
+        )
+    return ReservedShareComponent(
+        traffic_class=traffic_class,
+        reserved_share=0.0,
+        effective_idle_slope_mbps=0.0,
+        semantics="missing-queue",
+    )
 
 
 def validate_analysis_preconditions(case: Case) -> list[ValidationIssue]:
@@ -89,17 +130,62 @@ def validate_analysis_preconditions(case: Case) -> list[ValidationIssue]:
             relevant_classes.insert(0, TrafficClass.CLASS_A)
         for link_id in link_ids:
             link_speed_mbps = link_speeds.get(link_id, DEFAULT_LINK_SPEED_MBPS)
-            cumulative_reserved_share = sum(
-                _reserved_share_for_class(case, traffic_class, link_speed_mbps=link_speed_mbps)
-                for traffic_class in relevant_classes
-            )
+            components: list[ReservedShareComponent] = []
+            component_error = False
+            for traffic_class in relevant_classes:
+                queue = next(
+                    (
+                        candidate_queue
+                        for candidate_queue in case.queues
+                        if candidate_queue.traffic_class == traffic_class
+                    ),
+                    None,
+                )
+                if queue is not None and queue.credit_parameters is not None:
+                    consistency_issues = validate_credit_parameter_consistency(queue.credit_parameters)
+                    if consistency_issues:
+                        issues.append(
+                            ValidationIssue(
+                                code="analysis.cbs.slope.inconsistent",
+                                message=(
+                                    f"Inconsistent CBS slope configuration for stream '{stream.id}', "
+                                    f"class '{traffic_class.value}', link '{link_id}': "
+                                    + "; ".join(consistency_issues)
+                                ),
+                                location=f"{stream.id}:{link_id}:{traffic_class.value}",
+                            )
+                        )
+                        component_error = True
+                        continue
+                components.append(
+                    _reserved_component_for_class(
+                        case,
+                        traffic_class,
+                        link_speed_mbps=link_speed_mbps,
+                    )
+                )
+            if component_error:
+                continue
+            cumulative_reserved_share = sum(component.reserved_share for component in components)
             if cumulative_reserved_share > 1.0 + 1e-9:
+                component_summary = "; ".join(
+                    (
+                        f"{component.traffic_class.value}: "
+                        f"reserved_share={component.reserved_share:.6f} (normalized share), "
+                        f"effective_idle_slope_mbps={component.effective_idle_slope_mbps:.6f} "
+                        f"at link_speed_mbps={link_speed_mbps:.6f}, "
+                        f"semantics={component.semantics}"
+                    )
+                    for component in components
+                )
                 issues.append(
                     ValidationIssue(
                         code="analysis.reserved-bandwidth.exceeded",
                         message=(
-                            f"Reserved bandwidth for stream '{stream.id}' on link '{link_id}' "
-                            f"exceeds 1.0 for the analyzed class and higher priorities."
+                            f"Reserved bandwidth for stream '{stream.id}', class '{stream.traffic_class.value}', "
+                            f"on link '{link_id}' exceeds 1.0. "
+                            f"cumulative_reserved_share={cumulative_reserved_share:.6f}. "
+                            f"Components: {component_summary}"
                         ),
                         location=f"{stream.id}:{link_id}",
                     )

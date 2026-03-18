@@ -1,0 +1,506 @@
+{
+  "assumptions": [
+    "baseline-tsn"
+  ],
+  "expected_results": [
+    {
+      "expected_wcrt_us": 603.2,
+      "stream_id": "stream-0"
+    },
+    {
+      "expected_wcrt_us": 603.2,
+      "stream_id": "stream-1"
+    },
+    {
+      "expected_wcrt_us": 632.8,
+      "stream_id": "stream-2"
+    },
+    {
+      "expected_wcrt_us": 632.8,
+      "stream_id": "stream-3"
+    },
+    {
+      "expected_wcrt_us": 884.48,
+      "stream_id": "stream-4"
+    },
+    {
+      "expected_wcrt_us": 884.48,
+      "stream_id": "stream-5"
+    },
+    {
+      "expected_wcrt_us": 808.0,
+      "stream_id": "stream-6"
+    },
+    {
+      "expected_wcrt_us": 808.0,
+      "stream_id": "stream-7"
+    }
+  ],
+  "metadata": {
+    "case_id": "test-case-1",
+    "description": "Original assignment reference case using the provided prefixed topology, route, stream, and WCRT files.",
+    "name": "Assignment Baseline Test Case 1",
+    "source_directory": "/Users/taimurshah/Downloads/DTU/Semester-3/DRTS/Distributed_RTS_2/cases/external/test-case-1",
+    "tags": [
+      "baseline-tsn"
+    ]
+  },
+  "parameters": {},
+  "queues": [
+    {
+      "credit_parameters": {
+        "hi_credit_bytes": null,
+        "idle_slope_mbps": 500.0,
+        "lo_credit_bytes": null,
+        "send_slope_mbps": 500.0
+      },
+      "priority": 2,
+      "traffic_class": "class_a",
+      "uses_cbs": true
+    },
+    {
+      "credit_parameters": {
+        "hi_credit_bytes": null,
+        "idle_slope_mbps": 500.0,
+        "lo_credit_bytes": null,
+        "send_slope_mbps": 500.0
+      },
+      "priority": 1,
+      "traffic_class": "class_b",
+      "uses_cbs": true
+    },
+    {
+      "credit_parameters": null,
+      "priority": 0,
+      "traffic_class": "best_effort",
+      "uses_cbs": false
+    }
+  ],
+  "routes": [
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link5",
+          "node_id": "es1",
+          "transmission_time_us": 80.96
+        },
+        {
+          "egress_port_id": "6",
+          "link_id": "link2",
+          "node_id": "sw1",
+          "transmission_time_us": 80.96
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es0",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-0",
+      "stream_id": "stream-0"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link3",
+          "node_id": "es0",
+          "transmission_time_us": 80.96
+        },
+        {
+          "egress_port_id": "7",
+          "link_id": "link4",
+          "node_id": "sw1",
+          "transmission_time_us": 80.96
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es1",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-1",
+      "stream_id": "stream-1"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link3",
+          "node_id": "es0",
+          "transmission_time_us": 66.16
+        },
+        {
+          "egress_port_id": "7",
+          "link_id": "link4",
+          "node_id": "sw1",
+          "transmission_time_us": 66.16
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es1",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-2",
+      "stream_id": "stream-2"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link5",
+          "node_id": "es1",
+          "transmission_time_us": 66.16
+        },
+        {
+          "egress_port_id": "6",
+          "link_id": "link2",
+          "node_id": "sw1",
+          "transmission_time_us": 66.16
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es0",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-3",
+      "stream_id": "stream-3"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link5",
+          "node_id": "es1",
+          "transmission_time_us": 50.08
+        },
+        {
+          "egress_port_id": "6",
+          "link_id": "link2",
+          "node_id": "sw1",
+          "transmission_time_us": 50.08
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es0",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-4",
+      "stream_id": "stream-4"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link3",
+          "node_id": "es0",
+          "transmission_time_us": 50.08
+        },
+        {
+          "egress_port_id": "7",
+          "link_id": "link4",
+          "node_id": "sw1",
+          "transmission_time_us": 50.08
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es1",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-5",
+      "stream_id": "stream-5"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link3",
+          "node_id": "es0",
+          "transmission_time_us": 88.32
+        },
+        {
+          "egress_port_id": "7",
+          "link_id": "link4",
+          "node_id": "sw1",
+          "transmission_time_us": 88.32
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es1",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-6",
+      "stream_id": "stream-6"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link5",
+          "node_id": "es1",
+          "transmission_time_us": 88.32
+        },
+        {
+          "egress_port_id": "6",
+          "link_id": "link2",
+          "node_id": "sw1",
+          "transmission_time_us": 88.32
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es0",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-7",
+      "stream_id": "stream-7"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link3",
+          "node_id": "es0",
+          "transmission_time_us": 67.28
+        },
+        {
+          "egress_port_id": "7",
+          "link_id": "link4",
+          "node_id": "sw1",
+          "transmission_time_us": 67.28
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es1",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-8",
+      "stream_id": "stream-8"
+    },
+    {
+      "hops": [
+        {
+          "egress_port_id": null,
+          "link_id": "link5",
+          "node_id": "es1",
+          "transmission_time_us": 67.28
+        },
+        {
+          "egress_port_id": "6",
+          "link_id": "link2",
+          "node_id": "sw1",
+          "transmission_time_us": 67.28
+        },
+        {
+          "egress_port_id": null,
+          "link_id": null,
+          "node_id": "es0",
+          "transmission_time_us": null
+        }
+      ],
+      "route_id": "route-stream-9",
+      "stream_id": "stream-9"
+    }
+  ],
+  "streams": [
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es0",
+      "id": "stream-0",
+      "max_frame_size_bytes": 1012,
+      "name": "Stream0",
+      "period_us": 1000.0,
+      "priority": 2,
+      "route_id": "route-stream-0",
+      "source_node_id": "es1",
+      "traffic_class": "class_a"
+    },
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es1",
+      "id": "stream-1",
+      "max_frame_size_bytes": 1012,
+      "name": "Stream1",
+      "period_us": 1000.0,
+      "priority": 2,
+      "route_id": "route-stream-1",
+      "source_node_id": "es0",
+      "traffic_class": "class_a"
+    },
+    {
+      "deadline_us": 1264.0,
+      "destination_node_id": "es1",
+      "id": "stream-2",
+      "max_frame_size_bytes": 827,
+      "name": "Stream2",
+      "period_us": 2000.0,
+      "priority": 2,
+      "route_id": "route-stream-2",
+      "source_node_id": "es0",
+      "traffic_class": "class_a"
+    },
+    {
+      "deadline_us": 1264.0,
+      "destination_node_id": "es0",
+      "id": "stream-3",
+      "max_frame_size_bytes": 827,
+      "name": "Stream3",
+      "period_us": 2000.0,
+      "priority": 2,
+      "route_id": "route-stream-3",
+      "source_node_id": "es1",
+      "traffic_class": "class_a"
+    },
+    {
+      "deadline_us": 1880.0,
+      "destination_node_id": "es0",
+      "id": "stream-4",
+      "max_frame_size_bytes": 626,
+      "name": "Stream4",
+      "period_us": 2000.0,
+      "priority": 1,
+      "route_id": "route-stream-4",
+      "source_node_id": "es1",
+      "traffic_class": "class_b"
+    },
+    {
+      "deadline_us": 1880.0,
+      "destination_node_id": "es1",
+      "id": "stream-5",
+      "max_frame_size_bytes": 626,
+      "name": "Stream5",
+      "period_us": 2000.0,
+      "priority": 1,
+      "route_id": "route-stream-5",
+      "source_node_id": "es0",
+      "traffic_class": "class_b"
+    },
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es1",
+      "id": "stream-6",
+      "max_frame_size_bytes": 1104,
+      "name": "Stream6",
+      "period_us": 1000.0,
+      "priority": 1,
+      "route_id": "route-stream-6",
+      "source_node_id": "es0",
+      "traffic_class": "class_b"
+    },
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es0",
+      "id": "stream-7",
+      "max_frame_size_bytes": 1104,
+      "name": "Stream7",
+      "period_us": 1000.0,
+      "priority": 1,
+      "route_id": "route-stream-7",
+      "source_node_id": "es1",
+      "traffic_class": "class_b"
+    },
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es1",
+      "id": "stream-8",
+      "max_frame_size_bytes": 841,
+      "name": "Stream8",
+      "period_us": 1000.0,
+      "priority": 0,
+      "route_id": "route-stream-8",
+      "source_node_id": "es0",
+      "traffic_class": "best_effort"
+    },
+    {
+      "deadline_us": 1000.0,
+      "destination_node_id": "es0",
+      "id": "stream-9",
+      "max_frame_size_bytes": 841,
+      "name": "Stream9",
+      "period_us": 1000.0,
+      "priority": 0,
+      "route_id": "route-stream-9",
+      "source_node_id": "es1",
+      "traffic_class": "best_effort"
+    }
+  ],
+  "topology": {
+    "links": [
+      {
+        "id": "link0",
+        "source_node_id": "sw0",
+        "speed_mbps": 1000.0,
+        "target_node_id": "sw1"
+      },
+      {
+        "id": "link1",
+        "source_node_id": "sw1",
+        "speed_mbps": 1000.0,
+        "target_node_id": "sw0"
+      },
+      {
+        "id": "link2",
+        "source_node_id": "sw1",
+        "speed_mbps": 100.0,
+        "target_node_id": "es0"
+      },
+      {
+        "id": "link3",
+        "source_node_id": "es0",
+        "speed_mbps": 100.0,
+        "target_node_id": "sw1"
+      },
+      {
+        "id": "link4",
+        "source_node_id": "sw1",
+        "speed_mbps": 100.0,
+        "target_node_id": "es1"
+      },
+      {
+        "id": "link5",
+        "source_node_id": "es1",
+        "speed_mbps": 100.0,
+        "target_node_id": "sw1"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "sw0",
+        "name": null,
+        "type": "switch"
+      },
+      {
+        "id": "sw1",
+        "name": null,
+        "type": "switch"
+      },
+      {
+        "id": "es0",
+        "name": null,
+        "type": "end_system"
+      },
+      {
+        "id": "es1",
+        "name": null,
+        "type": "end_system"
+      }
+    ],
+    "ports": []
+  }
+}

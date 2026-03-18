@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from drts_tsn.domain.credits import effective_idle_slope_mbps, effective_send_slope_mbps
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.queues import QueueDefinition
 from drts_tsn.simulation.context import SimulationContext
@@ -53,7 +54,9 @@ def idle_slope_mbps_for_queue(queue_id: str, context: SimulationContext) -> floa
     queue_definition = _queue_definition_for_queue(queue_id, context)
     if queue_definition.credit_parameters is None:
         return 0.0
-    return queue_definition.credit_parameters.idle_slope_mbps
+    port_id = resolve_queue_port_id(queue_id, context)
+    link_speed_mbps = context.network_state.ports[port_id].speed_mbps
+    return effective_idle_slope_mbps(queue_definition.credit_parameters, link_speed_mbps=link_speed_mbps)
 
 
 def send_slope_mbps_for_queue(queue_id: str, context: SimulationContext) -> float:
@@ -62,7 +65,9 @@ def send_slope_mbps_for_queue(queue_id: str, context: SimulationContext) -> floa
     queue_definition = _queue_definition_for_queue(queue_id, context)
     if queue_definition.credit_parameters is None:
         return 0.0
-    return queue_definition.credit_parameters.send_slope_mbps or queue_definition.credit_parameters.idle_slope_mbps
+    port_id = resolve_queue_port_id(queue_id, context)
+    link_speed_mbps = context.network_state.ports[port_id].speed_mbps
+    return effective_send_slope_mbps(queue_definition.credit_parameters, link_speed_mbps=link_speed_mbps)
 
 
 def _record_credit_trace(

@@ -27,6 +27,8 @@ def test_analysis_rejects_reserved_bandwidth_exceeding_one(sample_case_path) -> 
                 queue.credit_parameters,
                 idle_slope_mbps=120.0,
                 send_slope_mbps=120.0,
+                idle_slope_share=1.2,
+                send_slope_share=1.2,
             ),
         )
         if queue.traffic_class == TrafficClass.CLASS_A and queue.credit_parameters is not None
@@ -37,6 +39,10 @@ def test_analysis_rejects_reserved_bandwidth_exceeding_one(sample_case_path) -> 
     issues = validate_analysis_preconditions(invalid_case)
 
     assert any(issue.code == "analysis.reserved-bandwidth.exceeded" for issue in issues)
+    reserved_issue = next(issue for issue in issues if issue.code == "analysis.reserved-bandwidth.exceeded")
+    assert "cumulative_reserved_share=" in reserved_issue.message
+    assert "normalized share" in reserved_issue.message
+    assert "effective_idle_slope_mbps=" in reserved_issue.message
     with pytest.raises(AnalysisPreconditionError, match="analysis.reserved-bandwidth.exceeded"):
         AnalysisEngine().run(invalid_case)
 
@@ -65,6 +71,8 @@ def test_non_strict_analysis_reports_structured_precondition_failures(sample_cas
                 queue.credit_parameters,
                 idle_slope_mbps=120.0,
                 send_slope_mbps=120.0,
+                idle_slope_share=1.2,
+                send_slope_share=1.2,
             ),
         )
         if queue.traffic_class == TrafficClass.CLASS_A and queue.credit_parameters is not None
@@ -81,3 +89,14 @@ def test_non_strict_analysis_reports_structured_precondition_failures(sample_cas
         failure["code"] == "analysis.reserved-bandwidth.exceeded"
         for failure in result.summary["precondition_failures"]
     )
+
+
+def test_analysis_preconditions_accept_assignment_case_under_baseline_slope_semantics(repo_root) -> None:
+    """The provided assignment case should pass reserved-bandwidth checks under baseline semantics."""
+
+    prepared = prepare_case(
+        repo_root / "cases" / "external" / "test-case-1",
+        include_analysis_checks=True,
+    )
+
+    assert validate_analysis_preconditions(prepared.normalized_case) == []

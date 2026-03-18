@@ -1,0 +1,11 @@
+stream_id,name,source_node_id,destination_node_id,traffic_class,priority,period_us,deadline_us,max_frame_size_bytes,route_id
+stream-0,Stream0,es1,es0,class_a,2,1000.0,1000.0,1012,route-stream-0
+stream-1,Stream1,es0,es1,class_a,2,1000.0,1000.0,1012,route-stream-1
+stream-2,Stream2,es0,es1,class_a,2,2000.0,1264.0,827,route-stream-2
+stream-3,Stream3,es1,es0,class_a,2,2000.0,1264.0,827,route-stream-3
+stream-4,Stream4,es1,es0,class_b,1,2000.0,1880.0,626,route-stream-4
+stream-5,Stream5,es0,es1,class_b,1,2000.0,1880.0,626,route-stream-5
+stream-6,Stream6,es0,es1,class_b,1,1000.0,1000.0,1104,route-stream-6
+stream-7,Stream7,es1,es0,class_b,1,1000.0,1000.0,1104,route-stream-7
+stream-8,Stream8,es0,es1,best_effort,0,1000.0,1000.0,841,route-stream-8
+stream-9,Stream9,es1,es0,best_effort,0,1000.0,1000.0,841,route-stream-9

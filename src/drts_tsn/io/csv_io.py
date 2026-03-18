@@ -13,7 +13,14 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
     """Read a CSV file into a list of dictionaries."""
 
     with path.open("r", encoding=DEFAULT_ENCODING, newline="") as handle:
-        return list(csv.DictReader(handle))
+        sample = handle.read(2048)
+        handle.seek(0)
+        dialect = csv.excel
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+        except csv.Error:
+            dialect = csv.excel
+        return list(csv.DictReader(handle, dialect=dialect))
 
 
 def write_csv_rows(

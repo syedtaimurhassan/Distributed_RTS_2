@@ -88,3 +88,28 @@ def test_comparison_engine_marks_issue_status_for_missing_streams() -> None:
 
     assert comparison.summary["engine_status"] == "issues_detected"
     assert comparison.tables["aggregate_comparison"][0]["engine_status"] == "issues_detected"
+
+
+def test_comparison_engine_ignores_best_effort_rows_from_simulation_stream_summary() -> None:
+    """Best-effort streams should not be flagged as missing analysis in AVB comparison."""
+
+    comparison = ComparisonEngine().run(
+        SimulationRunResult(
+            case_id="case-a",
+            run_id="sim-1",
+            tables={
+                "stream_summary": [
+                    {"stream_id": "stream-be", "traffic_class": "best_effort", "max_response_time_us": 10.0},
+                    {"stream_id": "stream-a", "traffic_class": "class_a", "max_response_time_us": 9.0},
+                ]
+            },
+        ),
+        AnalysisRunResult(
+            case_id="case-a",
+            run_id="ana-1",
+            tables={"stream_wcrt_summary": [{"stream_id": "stream-a", "end_to_end_wcrt_us": 12.0}]},
+        ),
+    )
+
+    assert [entry.stream_id for entry in comparison.entries] == ["stream-a"]
+    assert comparison.summary["missing_analysis_count"] == 0

@@ -1,0 +1,7 @@
+case_id: test-case-1
+name: Assignment Baseline Test Case 1
+description: Minimal scaffold input case for local validation and normalization.
+assumptions:
+  - line-topology
+  - single-direction
+  - baseline-tsn

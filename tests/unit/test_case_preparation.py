@@ -23,3 +23,21 @@ def test_prepare_case_smoke(sample_case_path) -> None:
     assert prepared.normalized_case.routes[0].hops[0].transmission_time_us == pytest.approx(20.48)
     assert prepared.normalized_case.routes[0].hops[1].link_id == "link-2"
     assert prepared.validation_report.is_valid
+
+
+def test_prepare_assignment_case_uses_baseline_cbs_slopes_and_passes_analysis_checks(repo_root) -> None:
+    """The bundled assignment case should normalize to baseline 100 Mb/s CBS defaults."""
+
+    prepared = prepare_case(
+        repo_root / "cases" / "external" / "test-case-1",
+        include_analysis_checks=True,
+    )
+    queue_by_class = {queue.traffic_class: queue for queue in prepared.normalized_case.queues}
+
+    assert queue_by_class[TrafficClass.CLASS_A].credit_parameters is not None
+    assert queue_by_class[TrafficClass.CLASS_A].credit_parameters.idle_slope_mbps == pytest.approx(50.0)
+    assert queue_by_class[TrafficClass.CLASS_A].credit_parameters.send_slope_mbps == pytest.approx(50.0)
+    assert queue_by_class[TrafficClass.CLASS_B].credit_parameters is not None
+    assert queue_by_class[TrafficClass.CLASS_B].credit_parameters.idle_slope_mbps == pytest.approx(50.0)
+    assert queue_by_class[TrafficClass.CLASS_B].credit_parameters.send_slope_mbps == pytest.approx(50.0)
+    assert prepared.validation_report.is_valid

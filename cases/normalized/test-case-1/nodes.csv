@@ -1,0 +1,5 @@
+node_id,node_type,name
+sw0,switch,
+sw1,switch,
+es0,end_system,
+es1,end_system,

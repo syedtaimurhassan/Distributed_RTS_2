@@ -150,6 +150,22 @@ def test_loader_infers_provided_course_case_filenames(tmp_path: Path) -> None:
     assert bundle.filenames["expected_wcrts"] == "provided-course-case-WCRTs.csv"
 
 
+def test_loader_uses_original_assignment_case_files_when_manifest_declares_them(repo_root: Path) -> None:
+    """The bundled external sample should resolve to the original assignment file set."""
+
+    bundle = load_external_case(repo_root / "cases" / "external" / "test-case-1")
+
+    assert bundle.filenames["topology"] == "test-case-1-topology.json"
+    assert bundle.filenames["routes"] == "test-case-1-routes.json"
+    assert bundle.filenames["streams"] == "test-case-1-streams.json"
+    assert bundle.filenames["expected_wcrts"] == "test-case-1-WCRTs.csv"
+    assert len(bundle.streams) == 10
+    assert len(bundle.routes) == 10
+    assert len(bundle.expected_wcrts) == 8
+    assert bundle.expected_wcrts[0]["stream_id"] == "stream-0"
+    assert bundle.expected_wcrts[0]["expected_wcrt_us"] == 603.2
+
+
 def test_normalized_export_bundle_writes_core_artifacts(sample_case_path: Path, tmp_path: Path) -> None:
     """Normalized export should emit JSON and the required CSV bundle."""
 

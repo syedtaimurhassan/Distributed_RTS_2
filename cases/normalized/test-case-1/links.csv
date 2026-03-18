@@ -1,0 +1,7 @@
+link_id,source_node_id,target_node_id,speed_mbps
+link0,sw0,sw1,1000.0
+link1,sw1,sw0,1000.0
+link2,sw1,es0,100.0
+link3,es0,sw1,100.0
+link4,sw1,es1,100.0
+link5,es1,sw1,100.0

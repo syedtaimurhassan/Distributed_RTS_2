@@ -15,20 +15,24 @@ from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.domain.queues import QueueDefinition
 
 
-def _resolve_slope_value(raw_value: object, *, link_speed_mbps: float) -> float:
-    """Resolve a configured slope into Mbps."""
+def _resolve_slope_values(raw_value: object, *, reference_link_speed_mbps: float) -> tuple[float, float]:
+    """Resolve a configured slope into canonical `(share, rate_mbps)` values."""
 
     numeric = float(raw_value)
+    if numeric <= 0:
+        raise ValueError("CBS slope values must be positive.")
     if numeric <= 1.0:
-        return numeric * link_speed_mbps
-    return numeric
+        return numeric, numeric * reference_link_speed_mbps
+    return numeric / reference_link_speed_mbps, numeric
 
 
 def derive_priority_classes(case: Case) -> Case:
     """Populate baseline queue definitions for the normalized case."""
 
     queue_profiles = case.parameters.get("queue_profiles", {})
-    representative_link_speed = case.topology.links[0].speed_mbps or DEFAULT_LINK_SPEED_MBPS
+    # Baseline configuration follows the assignment simplification at 100 Mb/s
+    # unless the case/config explicitly overrides the baseline link speed.
+    baseline_link_speed_mbps = float(case.parameters.get("link_speed_mbps", DEFAULT_LINK_SPEED_MBPS))
 
     def profile(traffic_class: TrafficClass) -> dict[str, object]:
         raw = queue_profiles.get(traffic_class.value, {}) if isinstance(queue_profiles, dict) else {}
@@ -38,20 +42,33 @@ def derive_priority_classes(case: Case) -> Case:
 
     class_a_profile = profile(TrafficClass.CLASS_A)
     class_b_profile = profile(TrafficClass.CLASS_B)
+    class_a_idle_share, class_a_idle_mbps = _resolve_slope_values(
+        class_a_profile.get("idle_slope", DEFAULT_CBS_SLOPE_SHARE),
+        reference_link_speed_mbps=baseline_link_speed_mbps,
+    )
+    class_a_send_share, class_a_send_mbps = _resolve_slope_values(
+        class_a_profile.get("send_slope", DEFAULT_CBS_SLOPE_SHARE),
+        reference_link_speed_mbps=baseline_link_speed_mbps,
+    )
+    class_b_idle_share, class_b_idle_mbps = _resolve_slope_values(
+        class_b_profile.get("idle_slope", DEFAULT_CBS_SLOPE_SHARE),
+        reference_link_speed_mbps=baseline_link_speed_mbps,
+    )
+    class_b_send_share, class_b_send_mbps = _resolve_slope_values(
+        class_b_profile.get("send_slope", DEFAULT_CBS_SLOPE_SHARE),
+        reference_link_speed_mbps=baseline_link_speed_mbps,
+    )
     queues = [
         QueueDefinition(
             traffic_class=TrafficClass.CLASS_A,
             priority=CLASS_PRIORITY_ORDER[TrafficClass.CLASS_A.value],
             uses_cbs=True,
             credit_parameters=CreditParameters(
-                idle_slope_mbps=_resolve_slope_value(
-                    class_a_profile.get("idle_slope", DEFAULT_CBS_SLOPE_SHARE),
-                    link_speed_mbps=representative_link_speed,
-                ),
-                send_slope_mbps=_resolve_slope_value(
-                    class_a_profile.get("send_slope", DEFAULT_CBS_SLOPE_SHARE),
-                    link_speed_mbps=representative_link_speed,
-                ),
+                idle_slope_mbps=class_a_idle_mbps,
+                send_slope_mbps=class_a_send_mbps,
+                idle_slope_share=class_a_idle_share,
+                send_slope_share=class_a_send_share,
+                slope_reference_speed_mbps=baseline_link_speed_mbps,
             ),
         ),
         QueueDefinition(
@@ -59,14 +76,11 @@ def derive_priority_classes(case: Case) -> Case:
             priority=CLASS_PRIORITY_ORDER[TrafficClass.CLASS_B.value],
             uses_cbs=True,
             credit_parameters=CreditParameters(
-                idle_slope_mbps=_resolve_slope_value(
-                    class_b_profile.get("idle_slope", DEFAULT_CBS_SLOPE_SHARE),
-                    link_speed_mbps=representative_link_speed,
-                ),
-                send_slope_mbps=_resolve_slope_value(
-                    class_b_profile.get("send_slope", DEFAULT_CBS_SLOPE_SHARE),
-                    link_speed_mbps=representative_link_speed,
-                ),
+                idle_slope_mbps=class_b_idle_mbps,
+                send_slope_mbps=class_b_send_mbps,
+                idle_slope_share=class_b_idle_share,
+                send_slope_share=class_b_send_share,
+                slope_reference_speed_mbps=baseline_link_speed_mbps,
             ),
         ),
         QueueDefinition(

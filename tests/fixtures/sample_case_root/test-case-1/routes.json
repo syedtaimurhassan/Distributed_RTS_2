@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "id": "route-stream-a",
+      "stream_id": "stream-a",
+      "hops": [
+        { "node_id": "talker" },
+        { "node_id": "sw1" },
+        { "node_id": "listener" }
+      ]
+    }
+  ]
+}

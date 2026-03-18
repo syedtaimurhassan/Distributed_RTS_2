@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from drts_tsn.domain.case import Case
+from drts_tsn.domain.credits import validate_credit_parameter_consistency
 from drts_tsn.domain.enums import TrafficClass
 
 from .errors import ValidationIssue
@@ -49,6 +50,14 @@ def validate_cbs_settings(case: Case) -> list[ValidationIssue]:
                 ValidationIssue(
                     code="queues.cbs.send.invalid",
                     message=f"Traffic class '{traffic_class.value}' has a non-positive send slope.",
+                )
+            )
+        consistency_issues = validate_credit_parameter_consistency(queue.credit_parameters)
+        for detail in consistency_issues:
+            issues.append(
+                ValidationIssue(
+                    code="queues.cbs.slope.inconsistent",
+                    message=f"Traffic class '{traffic_class.value}' has inconsistent slope units: {detail}",
                 )
             )
     be_queue = queue_by_class.get(TrafficClass.BEST_EFFORT)

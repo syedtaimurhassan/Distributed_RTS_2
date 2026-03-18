@@ -17,9 +17,9 @@ def repo_root() -> Path:
 
 @pytest.fixture()
 def sample_case_path(repo_root: Path) -> Path:
-    """Return the bundled sample external case path."""
+    """Return the stable one-stream sample case used by automated tests."""
 
-    return repo_root / "cases" / "external" / "test-case-1"
+    return repo_root / "tests" / "fixtures" / "sample_case_root" / "test-case-1"
 
 
 @pytest.fixture()
