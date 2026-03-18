@@ -34,3 +34,20 @@ def test_invalid_reserved_bandwidth_case_is_not_analysis_ready(
         issue.code == "analysis.reserved-bandwidth.exceeded"
         for issue in readiness.analysis_report.issues
     )
+
+
+def test_provided_assignment_case_is_ready_for_full_baseline_workflow(repo_root) -> None:
+    """Provided assignment case should remain baseline-runnable and analysis/simulation-ready."""
+
+    prepared = prepare_case(
+        repo_root / "cases" / "external" / "test-case-1",
+        include_analysis_checks=True,
+    )
+    readiness = prepared.readiness_report
+
+    assert prepared.validation_report.is_valid
+    assert readiness.schema_valid
+    assert readiness.normalization_valid
+    assert readiness.baseline_runnable
+    assert readiness.simulation_ready
+    assert readiness.analysis_ready

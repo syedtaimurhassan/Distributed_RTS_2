@@ -204,6 +204,7 @@ def test_normalize_case_command_writes_json_and_csv_bundle(repo_root, sample_cas
     assert (output_dir / "routes.csv").exists()
     assert (output_dir / "streams.csv").exists()
     assert (output_dir / "link_stream_map.csv").exists()
+    assert (output_dir / "artifact_index.json").exists()
 
 
 def test_analyze_command_writes_required_analysis_artifacts(repo_root, sample_case_path) -> None:
@@ -530,6 +531,120 @@ def test_readme_recommended_example_case_flow_is_executable(
     assert (run_root / "analysis" / "results" / "analysis_result.json").exists()
     assert (run_root / "simulation" / "results" / "simulation_result.json").exists()
     assert (run_root / "comparison" / "results" / "comparison_result.json").exists()
+
+
+def test_provided_case_cli_analyze_simulate_compare_workflow_succeeds(repo_root) -> None:
+    """Provided assignment case should succeed through CLI analyze->simulate->compare."""
+
+    case_path = repo_root / "cases" / "external" / "test-case-1"
+    analysis_run_id = f"provided-cli-analysis-{uuid.uuid4().hex}"
+    simulation_run_id = f"provided-cli-simulation-{uuid.uuid4().hex}"
+    comparison_run_id = f"provided-cli-compare-{uuid.uuid4().hex}"
+
+    analyze_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "analyze",
+            str(case_path),
+            "--run-id",
+            analysis_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    simulate_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "simulate",
+            str(case_path),
+            "--run-id",
+            simulation_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    compare_completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "drts_tsn.cli.main",
+            "compare",
+            "--analysis-result",
+            str(
+                repo_root
+                / "outputs"
+                / "runs"
+                / analysis_run_id
+                / "analysis"
+                / "results"
+                / "analysis_result.json"
+            ),
+            "--simulation-result",
+            str(
+                repo_root
+                / "outputs"
+                / "runs"
+                / simulation_run_id
+                / "simulation"
+                / "results"
+                / "simulation_result.json"
+            ),
+            "--run-id",
+            comparison_run_id,
+        ],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert analyze_completed.returncode == 0
+    assert simulate_completed.returncode == 0
+    assert compare_completed.returncode == 0
+    assert (
+        repo_root
+        / "outputs"
+        / "runs"
+        / analysis_run_id
+        / "analysis"
+        / "results"
+        / "analysis_result.json"
+    ).exists()
+    assert (
+        repo_root
+        / "outputs"
+        / "runs"
+        / simulation_run_id
+        / "simulation"
+        / "results"
+        / "simulation_result.json"
+    ).exists()
+    assert (
+        repo_root
+        / "outputs"
+        / "runs"
+        / comparison_run_id
+        / "comparison"
+        / "results"
+        / "stream_comparison.csv"
+    ).exists()
+    assert (
+        repo_root
+        / "outputs"
+        / "runs"
+        / comparison_run_id
+        / "comparison"
+        / "results"
+        / "expected_wcrt_comparison.csv"
+    ).exists()
 
 
 def test_batch_run_command_runs_for_external_cases_root(repo_root, sample_case_path) -> None:

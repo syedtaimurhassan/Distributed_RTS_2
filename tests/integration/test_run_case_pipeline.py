@@ -162,6 +162,62 @@ def test_run_case_pipeline_assignment_case_comparison_rows_are_aligned_and_uniqu
     assert expected_ids == set(stream_ids)
 
 
+def test_run_case_pipeline_assignment_case_stream_ids_align_across_all_baseline_artifacts(
+    repo_root,
+    tmp_path,
+    assert_csv_contract,
+) -> None:
+    """Canonical stream IDs should align across normalized, analysis, simulation, and comparison artifacts."""
+
+    _, layout = execute(
+        repo_root / "cases" / "external" / "test-case-1",
+        output_root=tmp_path,
+        run_id="assignment-case-stream-id-alignment",
+    )
+    normalized = read_json(layout.normalized_dir / "test-case-1.json")
+    normalized_streams = list(normalized.get("streams", []))
+    normalized_ids = {str(row["id"]) for row in normalized_streams}
+    normalized_avb_ids = {
+        str(row["id"])
+        for row in normalized_streams
+        if str(row.get("traffic_class", "")).strip().lower() in {"class_a", "class_b"}
+    }
+
+    analysis_rows = assert_csv_contract(
+        layout.analysis_results_dir / "stream_wcrt_summary.csv",
+        ANALYSIS_TABLE_FIELDS["stream_wcrt_summary"],
+    )
+    simulation_rows = assert_csv_contract(
+        layout.simulation_results_dir / "stream_summary.csv",
+        SIMULATION_TABLE_FIELDS["stream_summary"],
+    )
+    comparison_rows = assert_csv_contract(
+        layout.comparison_results_dir / "stream_comparison.csv",
+        COMPARISON_TABLE_FIELDS["stream_comparison"],
+    )
+    expected_rows = assert_csv_contract(
+        layout.comparison_results_dir / "expected_wcrt_comparison.csv",
+        COMPARISON_TABLE_FIELDS["expected_wcrt_comparison"],
+    )
+
+    analysis_ids = {str(row["stream_id"]) for row in analysis_rows}
+    simulation_ids = {str(row["stream_id"]) for row in simulation_rows}
+    simulation_avb_ids = {
+        str(row["stream_id"])
+        for row in simulation_rows
+        if str(row.get("traffic_class", "")).strip().lower() in {"class_a", "class_b"}
+    }
+    comparison_ids = {str(row["stream_id"]) for row in comparison_rows}
+    expected_ids = {str(row["stream_id"]) for row in expected_rows}
+
+    assert normalized_avb_ids
+    assert normalized_ids == simulation_ids
+    assert normalized_avb_ids == analysis_ids
+    assert normalized_avb_ids == simulation_avb_ids
+    assert normalized_avb_ids == comparison_ids
+    assert normalized_avb_ids == expected_ids
+
+
 def test_run_case_pipeline_fails_early_when_analysis_readiness_fails(
     invalid_reserved_bandwidth_case_path,
     tmp_path,

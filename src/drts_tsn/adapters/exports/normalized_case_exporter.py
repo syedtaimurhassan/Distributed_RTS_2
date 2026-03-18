@@ -102,4 +102,18 @@ def export_normalized_case_bundle(case: Case, destination_directory: Path) -> di
             destination_directory / "link_stream_map.csv",
         ),
     }
+    artifacts["artifact_index.json"] = write_json(
+        {
+            "schema_version": "normalized-bundle-index.v1",
+            "case_id": case.metadata.case_id,
+            "artifacts": [
+                {
+                    "name": name,
+                    "path": str(path),
+                }
+                for name, path in sorted(artifacts.items())
+            ],
+        },
+        destination_directory / "artifact_index.json",
+    )
     return artifacts

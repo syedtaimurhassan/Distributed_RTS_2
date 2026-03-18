@@ -318,6 +318,7 @@ The repository also provides shell shortcuts:
 ./make.sh simulate
 ./make.sh compare
 ./make.sh run
+./make.sh run-case
 ./make.sh batch
 ./make.sh clean
 ```
@@ -327,8 +328,9 @@ Behavior:
 - `setup`: create `.venv`, install dependencies, install the project in editable mode
 - `test`: run `pytest`
 - `validate`, `normalize`, `inspect`, `analyze`, `simulate`, `run`: execute the matching CLI command for `CASE_DIR`
-- `readiness`: run `validate-case --stage $READINESS_STAGE` (default `analysis`)
-- `compare`: compare the latest analysis and simulation outputs unless explicit result paths are provided
+- `run-case`: alias for `run`
+- `readiness`: run `validate-case --stage $READINESS_STAGE` (default `all`)
+- `compare`: compare existing analysis and simulation results from `RUN_ID` or `outputs/runs/latest`, unless explicit result paths are provided
 - `batch`: execute `batch-run` for `CASES_ROOT`
 - `clean`: remove generated run and batch artifacts
 
@@ -336,6 +338,7 @@ Useful environment overrides:
 
 - `CASE_DIR`
 - `READINESS_STAGE`
+- `NORMALIZED_OUTPUT_DIR`
 - `CASES_ROOT`
 - `BATCH_OPERATION`
 - `BATCH_ID`
@@ -343,6 +346,8 @@ Useful environment overrides:
 - `ANALYSIS_CONFIG`
 - `SIMULATION_CONFIG`
 - `OUTPUT_CONFIG`
+- `RUN_ID`
+- `COMPARE_RUN_ID`
 - `ANALYSIS_RESULT`
 - `SIMULATION_RESULT`
 
@@ -350,29 +355,69 @@ Example:
 
 ```bash
 CASE_DIR="$PWD/cases/external/test-case-1" ./make.sh analyze
-CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=analysis ./make.sh readiness
+CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=all ./make.sh readiness
+CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=demo-run ./make.sh run-case
 BATCH_OPERATION=run-case BATCH_ID=demo-batch ./make.sh batch
 ```
 
 ## Recommended Example-Case Workflow
 
-Use this command sequence for the bundled assignment case:
+Use this explicit stage-by-stage sequence for the bundled assignment case:
 
 ```bash
-drts validate-case cases/external/test-case-1 --stage analysis
+drts validate-case cases/external/test-case-1 --stage all
 drts normalize-case cases/external/test-case-1 --output-dir /tmp/test-case-1-normalized
-drts run-case cases/external/test-case-1 --run-id demo-run
-```
-
-If you want explicit step-by-step `analyze -> simulate -> compare` execution:
-
-```bash
 drts analyze cases/external/test-case-1 --run-id demo-analysis
 drts simulate cases/external/test-case-1 --run-id demo-simulation
 drts compare \
   --analysis-result outputs/runs/demo-analysis/analysis/results/analysis_result.json \
   --simulation-result outputs/runs/demo-simulation/simulation/results/simulation_result.json \
   --run-id demo-compare
+```
+
+For a single consolidated baseline run directory with one command:
+
+```bash
+drts run-case cases/external/test-case-1 --run-id demo-run
+```
+
+The same workflow through `make.sh`:
+
+```bash
+CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=all ./make.sh readiness
+CASE_DIR="$PWD/cases/external/test-case-1" NORMALIZED_OUTPUT_DIR="/tmp/test-case-1-normalized" ./make.sh normalize
+CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=demo-run ./make.sh run-case
+```
+
+## Submission-Ready Baseline Sequence
+
+From a clean checkout, this is the recommended command path to produce reproducible baseline artifacts for the provided case:
+
+```bash
+./make.sh setup
+. .venv/bin/activate
+CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=all ./make.sh readiness
+CASE_DIR="$PWD/cases/external/test-case-1" NORMALIZED_OUTPUT_DIR="$PWD/cases/normalized/test-case-1" ./make.sh normalize
+CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=submission-test-case-1 ./make.sh run-case
+```
+
+Expected artifacts for hand-in support:
+
+- code under `src/`, configs, and tests
+- run artifacts under `outputs/runs/submission-test-case-1/`
+- normalized export under `cases/normalized/test-case-1/`
+- command and artifact metadata under `outputs/runs/submission-test-case-1/metadata/`
+- README instructions in this file
+
+For a manual step-by-step make workflow (`analyze -> simulate -> compare`) using one fixed source run id:
+
+```bash
+CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=stepwise-test-case-1 ./make.sh analyze
+CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=stepwise-test-case-1 ./make.sh simulate
+ANALYSIS_RESULT="$PWD/outputs/runs/stepwise-test-case-1/analysis/results/analysis_result.json" \
+SIMULATION_RESULT="$PWD/outputs/runs/stepwise-test-case-1/simulation/results/simulation_result.json" \
+COMPARE_RUN_ID=stepwise-test-case-1-compare \
+./make.sh compare
 ```
 
 ## Configuration
@@ -426,6 +471,7 @@ Logging YAML files are available under `configs/logging/` and can be passed thro
 - `routes.csv`
 - `streams.csv`
 - `link_stream_map.csv`
+- `artifact_index.json`
 
 ### Single-run layout
 
@@ -591,4 +637,3 @@ Current automated coverage includes:
 - Python package name: `drts-mini-project-2`
 - console script: `drts`
 - source layout: `src/`
-

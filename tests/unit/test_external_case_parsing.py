@@ -9,7 +9,7 @@ from drts_tsn.adapters.external_cases.mapper import map_external_case
 from drts_tsn.adapters.exports.normalized_case_exporter import export_normalized_case_bundle
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.io.csv_io import read_csv_rows
-from drts_tsn.io.json_io import write_json
+from drts_tsn.io.json_io import read_json, write_json
 from drts_tsn.io.manifest import write_manifest
 from drts_tsn.orchestration.run_manager import prepare_case
 
@@ -179,6 +179,7 @@ def test_normalized_export_bundle_writes_core_artifacts(sample_case_path: Path, 
         "routes.csv",
         "streams.csv",
         "link_stream_map.csv",
+        "artifact_index.json",
     }
     for path in artifacts.values():
         assert path.exists()
@@ -201,3 +202,14 @@ def test_normalized_export_bundle_writes_core_artifacts(sample_case_path: Path, 
         "hop_index",
         "transmission_time_us",
     ]
+    artifact_index = read_json(artifacts["artifact_index.json"])
+    assert artifact_index["schema_version"] == "normalized-bundle-index.v1"
+    assert artifact_index["case_id"] == prepared.normalized_case.metadata.case_id
+    assert {entry["name"] for entry in artifact_index["artifacts"]} == {
+        "normalized_case.json",
+        "nodes.csv",
+        "links.csv",
+        "routes.csv",
+        "streams.csv",
+        "link_stream_map.csv",
+    }
