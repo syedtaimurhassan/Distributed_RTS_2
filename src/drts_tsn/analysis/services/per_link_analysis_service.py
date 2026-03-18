@@ -59,36 +59,47 @@ def analyze_link(context: LinkTrafficContext) -> PerLinkAnalysisOutput:
 
     if not reserved_bandwidth_feasible(context.reserved_share_up_to_class):
         raise ValueError(
-            f"Reserved bandwidth exceeds 1.0 for stream '{context.stream_id}' on link '{context.link_id}'."
+            "Reserved bandwidth exceeds 1.0 in per-link analysis context: "
+            f"stream='{context.stream_id}', class='{context.traffic_class.value}', "
+            f"link='{context.link_id}', "
+            f"reserved_share={context.reserved_share:.6f}, "
+            f"reserved_share_up_to_class={context.reserved_share_up_to_class:.6f}."
+        )
+    try:
+        same_priority = compute_same_priority_interference(
+            analyzed_deadline_us=context.deadline_us,
+            analyzed_period_us=context.period_us,
+            same_priority_flows=context.same_priority_flows,
+        )
+        lower_priority = compute_lower_priority_interference(context.lower_priority_flows)
+        higher_priority = compute_higher_priority_interference(
+            analyzed_class=context.traffic_class,
+            higher_priority_flows=context.higher_priority_flows,
+            lower_priority_blocking_us=lower_priority.total_us,
         )
 
-    same_priority = compute_same_priority_interference(
-        analyzed_deadline_us=context.deadline_us,
-        analyzed_period_us=context.period_us,
-        same_priority_flows=context.same_priority_flows,
-    )
-    lower_priority = compute_lower_priority_interference(context.lower_priority_flows)
-    higher_priority = compute_higher_priority_interference(
-        analyzed_class=context.traffic_class,
-        higher_priority_flows=context.higher_priority_flows,
-        lower_priority_blocking_us=lower_priority.total_us,
-    )
-
-    if context.traffic_class == TrafficClass.CLASS_A:
-        per_link_wcrt_us = compute_class_a_wcrt_us(
-            transmission_time_us=context.transmission_time_us,
-            same_priority_interference_us=same_priority.total_us,
-            lower_priority_interference_us=lower_priority.total_us,
-        )
-    elif context.traffic_class == TrafficClass.CLASS_B:
-        per_link_wcrt_us = compute_class_b_wcrt_us(
-            transmission_time_us=context.transmission_time_us,
-            same_priority_interference_us=same_priority.total_us,
-            lower_priority_interference_us=lower_priority.total_us,
-            higher_priority_interference_us=higher_priority.total_us,
-        )
-    else:  # pragma: no cover - guarded upstream
-        raise ValueError("Best-effort traffic is excluded from analytical WCRT computation.")
+        if context.traffic_class == TrafficClass.CLASS_A:
+            per_link_wcrt_us = compute_class_a_wcrt_us(
+                transmission_time_us=context.transmission_time_us,
+                same_priority_interference_us=same_priority.total_us,
+                lower_priority_interference_us=lower_priority.total_us,
+            )
+        elif context.traffic_class == TrafficClass.CLASS_B:
+            per_link_wcrt_us = compute_class_b_wcrt_us(
+                transmission_time_us=context.transmission_time_us,
+                same_priority_interference_us=same_priority.total_us,
+                lower_priority_interference_us=lower_priority.total_us,
+                higher_priority_interference_us=higher_priority.total_us,
+            )
+        else:  # pragma: no cover - guarded upstream
+            raise ValueError("Best-effort traffic is excluded from analytical WCRT computation.")
+    except ValueError as exc:
+        raise ValueError(
+            "Per-link analytical computation failed: "
+            f"stream='{context.stream_id}', class='{context.traffic_class.value}', "
+            f"link='{context.link_id}', hop_index={context.hop_index}. "
+            f"Cause: {exc}"
+        ) from exc
 
     same_priority_parameters = {
         flow.stream_id: (flow.reserved_share, flow.send_slope_share)

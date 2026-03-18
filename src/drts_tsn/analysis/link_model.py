@@ -53,33 +53,66 @@ class LinkTrafficContext:
 
 
 def _queue_parameters_for_class(
-    case: Case,
+    queue_parameters_by_class: dict[TrafficClass, tuple[int, float, float]],
     traffic_class: TrafficClass,
-    *,
-    link_speed_mbps: float,
 ) -> tuple[int, float, float]:
     """Return priority plus normalized idle/send shares for one traffic class."""
 
+    parameters = queue_parameters_by_class.get(traffic_class)
+    if parameters is None:
+        raise ValueError(f"Missing queue definition for traffic class '{traffic_class.value}'.")
+    return parameters
+
+
+def _build_queue_parameters_by_class(case: Case) -> dict[TrafficClass, tuple[int, float, float]]:
+    """Return priority plus normalized idle/send shares for each defined queue class."""
+
+    queue_parameters_by_class: dict[TrafficClass, tuple[int, float, float]] = {}
     for queue in case.queues:
-        if queue.traffic_class != traffic_class:
-            continue
         if not queue.uses_cbs or queue.credit_parameters is None:
-            return queue.priority, 0.0, 0.0
-        return (
+            queue_parameters_by_class[queue.traffic_class] = (queue.priority, 0.0, 0.0)
+            continue
+        queue_parameters_by_class[queue.traffic_class] = (
             queue.priority,
             idle_slope_share(queue.credit_parameters),
             send_slope_share(queue.credit_parameters),
         )
-    raise ValueError(f"Missing queue definition for traffic class '{traffic_class.value}'.")
+    return queue_parameters_by_class
 
 
-def _build_link_flow(case: Case, stream: Stream, *, link_speed_mbps: float) -> LinkFlow:
+def _reserved_share_up_to_class(
+    *,
+    traffic_class: TrafficClass,
+    queue_parameters_by_class: dict[TrafficClass, tuple[int, float, float]],
+) -> float:
+    """Return cumulative reserved share for the analyzed class plus higher AVB classes."""
+
+    class_a_share = _queue_parameters_for_class(
+        queue_parameters_by_class,
+        TrafficClass.CLASS_A,
+    )[1]
+    if traffic_class == TrafficClass.CLASS_A:
+        return class_a_share
+    if traffic_class == TrafficClass.CLASS_B:
+        class_b_share = _queue_parameters_for_class(
+            queue_parameters_by_class,
+            TrafficClass.CLASS_B,
+        )[1]
+        return class_a_share + class_b_share
+    return 0.0
+
+
+def _build_link_flow(
+    stream: Stream,
+    *,
+    link_speed_mbps: float,
+    queue_parameters_by_class: dict[TrafficClass, tuple[int, float, float]],
+) -> LinkFlow:
     """Build a per-link stream view with derived transmission and reserved shares."""
 
     priority, reserved_share, send_slope_share = _queue_parameters_for_class(
-        case,
+        queue_parameters_by_class,
         stream.traffic_class,
-        link_speed_mbps=link_speed_mbps,
     )
     return LinkFlow(
         stream_id=stream.id,
@@ -107,6 +140,7 @@ def build_link_traffic_contexts(case: Case) -> list[LinkTrafficContext]:
         link.id: float(link.speed_mbps or DEFAULT_LINK_SPEED_MBPS)
         for link in case.topology.links
     }
+    queue_parameters_by_class = _build_queue_parameters_by_class(case)
 
     contexts: list[LinkTrafficContext] = []
     for stream in case.streams:
@@ -116,14 +150,22 @@ def build_link_traffic_contexts(case: Case) -> list[LinkTrafficContext]:
         link_ids = route_links_by_stream.get(stream.id, [])
         for hop_index, link_id in enumerate(link_ids):
             link_speed_mbps = link_speed_by_id.get(link_id, DEFAULT_LINK_SPEED_MBPS)
-            current_flow = _build_link_flow(case, stream, link_speed_mbps=link_speed_mbps)
+            current_flow = _build_link_flow(
+                stream,
+                link_speed_mbps=link_speed_mbps,
+                queue_parameters_by_class=queue_parameters_by_class,
+            )
             streams_on_link = [
                 candidate
                 for candidate in case.streams
                 if link_id in route_links_by_stream.get(candidate.id, [])
             ]
             candidate_flows = [
-                _build_link_flow(case, candidate, link_speed_mbps=link_speed_mbps)
+                _build_link_flow(
+                    candidate,
+                    link_speed_mbps=link_speed_mbps,
+                    queue_parameters_by_class=queue_parameters_by_class,
+                )
                 for candidate in streams_on_link
                 if candidate.id != stream.id
             ]
@@ -136,14 +178,9 @@ def build_link_traffic_contexts(case: Case) -> list[LinkTrafficContext]:
             lower_priority_flows = tuple(
                 flow for flow in candidate_flows if flow.priority < current_flow.priority
             )
-            representative_flows_by_class = {
-                flow.traffic_class: flow
-                for flow in (current_flow, *higher_priority_flows)
-                if flow.traffic_class != TrafficClass.BEST_EFFORT
-            }
-            reserved_share_up_to_class = sum(
-                flow.reserved_share
-                for flow in representative_flows_by_class.values()
+            reserved_share_up_to_class = _reserved_share_up_to_class(
+                traffic_class=stream.traffic_class,
+                queue_parameters_by_class=queue_parameters_by_class,
             )
             contexts.append(
                 LinkTrafficContext(

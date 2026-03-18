@@ -67,3 +67,36 @@ def test_best_effort_streams_are_excluded_from_analysis_contexts(sample_case_pat
     contexts = build_link_traffic_contexts(case_with_be)
 
     assert {context.stream_id for context in contexts} == {"stream-a"}
+
+
+def test_reserved_share_up_to_class_uses_queue_reservations_even_without_higher_priority_flows(
+    sample_case_path,
+) -> None:
+    """Class B contexts should include Class A reservation even when no Class A stream is present."""
+
+    prepared = prepare_case(sample_case_path, include_analysis_checks=True)
+    case_only_b = deepcopy(prepared.normalized_case)
+    case_only_b.streams = [
+        replace(
+            case_only_b.streams[0],
+            id="stream-b-only",
+            name="B-only stream",
+            traffic_class=TrafficClass.CLASS_B,
+            route_id="route-stream-b-only",
+            priority=1,
+        )
+    ]
+    case_only_b.routes = [
+        Route(
+            stream_id="stream-b-only",
+            route_id="route-stream-b-only",
+            hops=deepcopy(prepared.normalized_case.routes[0].hops),
+        )
+    ]
+
+    contexts = build_link_traffic_contexts(case_only_b)
+
+    assert contexts
+    assert all(context.traffic_class == TrafficClass.CLASS_B for context in contexts)
+    assert all(context.reserved_share == 0.5 for context in contexts)
+    assert all(context.reserved_share_up_to_class == 1.0 for context in contexts)

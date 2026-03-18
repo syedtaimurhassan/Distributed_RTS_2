@@ -2,15 +2,29 @@
 
 from __future__ import annotations
 
+import csv
 import shutil
 import subprocess
 import sys
 import uuid
 from pathlib import Path
 
+from drts_tsn.analysis.outputs.analysis_result_builder import ANALYSIS_SCHEMA_VERSION, ANALYSIS_TABLE_FIELDS
 from drts_tsn.io.json_io import read_json, write_json
 from drts_tsn.io.manifest import write_manifest
 from drts_tsn.io.yaml_io import write_yaml
+from drts_tsn.reporting.csv_catalog import (
+    ANALYSIS_CREDIT_RECOVERY_TRACE_CSV,
+    ANALYSIS_END_TO_END_ACCUMULATION_TRACE_CSV,
+    ANALYSIS_HIGHER_PRIORITY_TRACE_CSV,
+    ANALYSIS_LINK_INTERFERENCE_TRACE_CSV,
+    ANALYSIS_LOWER_PRIORITY_TRACE_CSV,
+    ANALYSIS_PER_LINK_FORMULA_TRACE_CSV,
+    ANALYSIS_PER_LINK_WCRT_SUMMARY_CSV,
+    ANALYSIS_RUN_SUMMARY_CSV,
+    ANALYSIS_SAME_PRIORITY_TRACE_CSV,
+    ANALYSIS_STREAM_WCRT_SUMMARY_CSV,
+)
 
 
 def test_python_module_help_runs(repo_root) -> None:
@@ -167,11 +181,32 @@ def test_analyze_command_writes_required_analysis_artifacts(repo_root, sample_ca
     )
 
     assert completed.returncode == 0
-    run_root = repo_root / "outputs" / "runs" / run_id / "analysis" / "results"
-    assert (run_root / "analysis_result.json").exists()
-    assert (run_root / "stream_wcrt_summary.csv").exists()
-    assert (run_root / "per_link_wcrt_summary.csv").exists()
-    assert (run_root / "run_summary.csv").exists()
+    results_root = repo_root / "outputs" / "runs" / run_id / "analysis" / "results"
+    traces_root = repo_root / "outputs" / "runs" / run_id / "analysis" / "traces"
+    metadata_root = repo_root / "outputs" / "runs" / run_id / "metadata"
+    assert (results_root / "analysis_result.json").exists()
+    assert (metadata_root / "analysis_manifest.json").exists()
+
+    csv_targets = {
+        "stream_wcrt_summary": results_root / ANALYSIS_STREAM_WCRT_SUMMARY_CSV,
+        "per_link_wcrt_summary": results_root / ANALYSIS_PER_LINK_WCRT_SUMMARY_CSV,
+        "run_summary": results_root / ANALYSIS_RUN_SUMMARY_CSV,
+        "link_interference_trace": traces_root / ANALYSIS_LINK_INTERFERENCE_TRACE_CSV,
+        "same_priority_trace": traces_root / ANALYSIS_SAME_PRIORITY_TRACE_CSV,
+        "credit_recovery_trace": traces_root / ANALYSIS_CREDIT_RECOVERY_TRACE_CSV,
+        "lower_priority_trace": traces_root / ANALYSIS_LOWER_PRIORITY_TRACE_CSV,
+        "higher_priority_trace": traces_root / ANALYSIS_HIGHER_PRIORITY_TRACE_CSV,
+        "per_link_formula_trace": traces_root / ANALYSIS_PER_LINK_FORMULA_TRACE_CSV,
+        "end_to_end_accumulation_trace": traces_root / ANALYSIS_END_TO_END_ACCUMULATION_TRACE_CSV,
+    }
+    for table_name, path in csv_targets.items():
+        assert path.exists()
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            assert reader.fieldnames == ANALYSIS_TABLE_FIELDS[table_name]
+
+    analysis_manifest = read_json(metadata_root / "analysis_manifest.json")
+    assert analysis_manifest["schema_version"] == ANALYSIS_SCHEMA_VERSION
 
 
 def test_analyze_command_fails_cleanly_for_reserved_bandwidth_violation(

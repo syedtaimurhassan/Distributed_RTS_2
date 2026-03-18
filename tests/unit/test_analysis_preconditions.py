@@ -9,7 +9,7 @@ import pytest
 
 from drts_tsn.analysis.config import AnalysisConfig
 from drts_tsn.analysis.engine import AnalysisEngine
-from drts_tsn.analysis.preconditions import AnalysisPreconditionError
+from drts_tsn.analysis.preconditions import AnalysisPreconditionError, format_precondition_failures
 from drts_tsn.domain.enums import TrafficClass
 from drts_tsn.orchestration.run_manager import prepare_case
 from drts_tsn.validation.analysis_preconditions import validate_analysis_preconditions
@@ -100,3 +100,34 @@ def test_analysis_preconditions_accept_assignment_case_under_baseline_slope_sema
     )
 
     assert validate_analysis_preconditions(prepared.normalized_case) == []
+
+
+def test_analysis_preconditions_fail_when_required_avb_queue_is_missing(sample_case_path) -> None:
+    """Analysis should fail loudly if a required AVB queue definition is absent."""
+
+    prepared = prepare_case(sample_case_path, include_analysis_checks=True)
+    invalid_case = deepcopy(prepared.normalized_case)
+    invalid_case.queues = [
+        queue for queue in invalid_case.queues if queue.traffic_class != TrafficClass.CLASS_A
+    ]
+
+    issues = validate_analysis_preconditions(invalid_case)
+
+    assert any(issue.code == "analysis.queue.missing" for issue in issues)
+    with pytest.raises(AnalysisPreconditionError, match="analysis.queue.missing"):
+        AnalysisEngine().run(invalid_case)
+
+
+def test_precondition_failure_formatter_is_structured_and_contextual(sample_case_path) -> None:
+    """Precondition error formatting should preserve issue count and per-issue context."""
+
+    prepared = prepare_case(sample_case_path, include_analysis_checks=True)
+    invalid_case = deepcopy(prepared.normalized_case)
+    invalid_case.queues = [
+        queue for queue in invalid_case.queues if queue.traffic_class != TrafficClass.CLASS_A
+    ]
+
+    message = format_precondition_failures(validate_analysis_preconditions(invalid_case))
+
+    assert message.startswith("Analysis preconditions failed (")
+    assert "\n- analysis.queue.missing" in message

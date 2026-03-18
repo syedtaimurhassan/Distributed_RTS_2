@@ -51,6 +51,10 @@ def test_analyze_pipeline_writes_required_summary_and_trace_artifacts(
     assert run_manifest_json["case"]["case_path"]
     assert run_manifest_json["command_invoked"].startswith("analyze ")
     assert run_manifest_json["config_snapshot"]["analysis"]["values"]["strict_validation"] is True
+    assert set(result_json["tables"]) == set(ANALYSIS_TABLE_FIELDS)
+    for table_name, fieldnames in ANALYSIS_TABLE_FIELDS.items():
+        for row in result_json["tables"].get(table_name, []):
+            assert set(row) == set(fieldnames)
 
     csv_targets = {
         "stream_wcrt_summary": layout.analysis_results_dir / ANALYSIS_STREAM_WCRT_SUMMARY_CSV,

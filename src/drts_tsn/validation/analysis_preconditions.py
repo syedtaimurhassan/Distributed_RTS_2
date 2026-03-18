@@ -13,6 +13,7 @@ from drts_tsn.domain.credits import (
     validate_credit_parameter_consistency,
 )
 from drts_tsn.domain.enums import TrafficClass
+from drts_tsn.domain.queues import QueueDefinition
 from drts_tsn.domain.routes import route_link_ids
 
 from .errors import ValidationIssue
@@ -28,38 +29,52 @@ class ReservedShareComponent:
     semantics: str
 
 
-def _reserved_component_for_class(
-    case: Case,
+def _reserved_component_for_queue(
+    *,
     traffic_class: TrafficClass,
+    idle_share: float,
+    idle_rate_mbps: float,
+    semantics: str,
+) -> ReservedShareComponent:
+    """Build one reserved-share component row."""
+
+    return ReservedShareComponent(
+        traffic_class=traffic_class,
+        reserved_share=idle_share,
+        effective_idle_slope_mbps=idle_rate_mbps,
+        semantics=semantics,
+    )
+
+
+def _queue_for_class(
+    queue_by_class: dict[TrafficClass, QueueDefinition],
+    *,
+    traffic_class: TrafficClass,
+) -> QueueDefinition | None:
+    """Return the queue entry for one class from a pre-indexed lookup."""
+
+    return queue_by_class.get(traffic_class)
+
+
+def _resolved_reserved_component(
+    queue: QueueDefinition,
     *,
     link_speed_mbps: float,
 ) -> ReservedShareComponent:
     """Return the reserved-share contribution for one class on one link."""
 
-    for queue in case.queues:
-        if queue.traffic_class != traffic_class:
-            continue
-        if not queue.uses_cbs or queue.credit_parameters is None:
-            return ReservedShareComponent(
-                traffic_class=traffic_class,
-                reserved_share=0.0,
-                effective_idle_slope_mbps=0.0,
-                semantics="non-cbs",
-            )
-        return ReservedShareComponent(
-            traffic_class=traffic_class,
-            reserved_share=idle_slope_share(queue.credit_parameters),
-            effective_idle_slope_mbps=effective_idle_slope_mbps(
-                queue.credit_parameters,
-                link_speed_mbps=link_speed_mbps,
-            ),
-            semantics=slope_semantics_summary(queue.credit_parameters),
+    if queue.credit_parameters is None:
+        raise ValueError(
+            f"Queue '{queue.traffic_class.value}' is missing CBS credit parameters."
         )
-    return ReservedShareComponent(
-        traffic_class=traffic_class,
-        reserved_share=0.0,
-        effective_idle_slope_mbps=0.0,
-        semantics="missing-queue",
+    return _reserved_component_for_queue(
+        traffic_class=queue.traffic_class,
+        idle_share=idle_slope_share(queue.credit_parameters),
+        idle_rate_mbps=effective_idle_slope_mbps(
+            queue.credit_parameters,
+            link_speed_mbps=link_speed_mbps,
+        ),
+        semantics=slope_semantics_summary(queue.credit_parameters),
     )
 
 
@@ -92,6 +107,7 @@ def validate_analysis_preconditions(case: Case) -> list[ValidationIssue]:
         return issues
 
     route_by_id = {(route.route_id or route.stream_id): route for route in case.routes}
+    queue_by_class = {queue.traffic_class: queue for queue in case.queues}
     link_speeds = {
         link.id: float(link.speed_mbps or DEFAULT_LINK_SPEED_MBPS)
         for link in case.topology.links
@@ -133,34 +149,54 @@ def validate_analysis_preconditions(case: Case) -> list[ValidationIssue]:
             components: list[ReservedShareComponent] = []
             component_error = False
             for traffic_class in relevant_classes:
-                queue = next(
-                    (
-                        candidate_queue
-                        for candidate_queue in case.queues
-                        if candidate_queue.traffic_class == traffic_class
-                    ),
-                    None,
+                queue = _queue_for_class(
+                    queue_by_class,
+                    traffic_class=traffic_class,
                 )
-                if queue is not None and queue.credit_parameters is not None:
-                    consistency_issues = validate_credit_parameter_consistency(queue.credit_parameters)
-                    if consistency_issues:
-                        issues.append(
-                            ValidationIssue(
-                                code="analysis.cbs.slope.inconsistent",
-                                message=(
-                                    f"Inconsistent CBS slope configuration for stream '{stream.id}', "
-                                    f"class '{traffic_class.value}', link '{link_id}': "
-                                    + "; ".join(consistency_issues)
-                                ),
-                                location=f"{stream.id}:{link_id}:{traffic_class.value}",
-                            )
+                if queue is None:
+                    issues.append(
+                        ValidationIssue(
+                            code="analysis.queue.missing",
+                            message=(
+                                f"Missing queue definition for class '{traffic_class.value}' while analyzing "
+                                f"stream '{stream.id}' on link '{link_id}'."
+                            ),
+                            location=f"{stream.id}:{link_id}:{traffic_class.value}",
                         )
-                        component_error = True
-                        continue
+                    )
+                    component_error = True
+                    continue
+                if not queue.uses_cbs or queue.credit_parameters is None:
+                    issues.append(
+                        ValidationIssue(
+                            code="analysis.queue.cbs.required",
+                            message=(
+                                f"Queue for class '{traffic_class.value}' must use CBS with credit parameters "
+                                f"for analytical stream '{stream.id}' on link '{link_id}'."
+                            ),
+                            location=f"{stream.id}:{link_id}:{traffic_class.value}",
+                        )
+                    )
+                    component_error = True
+                    continue
+                consistency_issues = validate_credit_parameter_consistency(queue.credit_parameters)
+                if consistency_issues:
+                    issues.append(
+                        ValidationIssue(
+                            code="analysis.cbs.slope.inconsistent",
+                            message=(
+                                f"Inconsistent CBS slope configuration for stream '{stream.id}', "
+                                f"class '{traffic_class.value}', link '{link_id}': "
+                                + "; ".join(consistency_issues)
+                            ),
+                            location=f"{stream.id}:{link_id}:{traffic_class.value}",
+                        )
+                    )
+                    component_error = True
+                    continue
                 components.append(
-                    _reserved_component_for_class(
-                        case,
-                        traffic_class,
+                    _resolved_reserved_component(
+                        queue,
                         link_speed_mbps=link_speed_mbps,
                     )
                 )

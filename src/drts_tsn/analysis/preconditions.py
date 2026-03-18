@@ -26,8 +26,8 @@ def format_precondition_failures(issues: list[ValidationIssue]) -> str:
 
     if not issues:
         return "Analysis preconditions failed."
-    details = "; ".join(
-        " | ".join(part for part in (issue.code, issue.location, issue.message) if part)
+    details = "\n".join(
+        f"- {' | '.join(part for part in (issue.code, issue.location, issue.message) if part)}"
         for issue in issues
     )
-    return f"Analysis preconditions failed: {details}"
+    return f"Analysis preconditions failed ({len(issues)} issue(s)):\n{details}"
