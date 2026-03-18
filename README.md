@@ -364,6 +364,17 @@ drts normalize-case cases/external/test-case-1 --output-dir /tmp/test-case-1-nor
 drts run-case cases/external/test-case-1 --run-id demo-run
 ```
 
+If you want explicit step-by-step `analyze -> simulate -> compare` execution:
+
+```bash
+drts analyze cases/external/test-case-1 --run-id demo-analysis
+drts simulate cases/external/test-case-1 --run-id demo-simulation
+drts compare \
+  --analysis-result outputs/runs/demo-analysis/analysis/results/analysis_result.json \
+  --simulation-result outputs/runs/demo-simulation/simulation/results/simulation_result.json \
+  --run-id demo-compare
+```
+
 ## Configuration
 
 Configuration files live under `configs/`.
@@ -580,5 +591,4 @@ Current automated coverage includes:
 - Python package name: `drts-mini-project-2`
 - console script: `drts`
 - source layout: `src/`
-
 
