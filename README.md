@@ -389,37 +389,6 @@ CASE_DIR="$PWD/cases/external/test-case-1" NORMALIZED_OUTPUT_DIR="/tmp/test-case
 CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=demo-run ./make.sh run-case
 ```
 
-## Submission-Ready Baseline Sequence
-
-From a clean checkout, this is the recommended command path to produce reproducible baseline artifacts for the provided case:
-
-```bash
-./make.sh setup
-. .venv/bin/activate
-CASE_DIR="$PWD/cases/external/test-case-1" READINESS_STAGE=all ./make.sh readiness
-CASE_DIR="$PWD/cases/external/test-case-1" NORMALIZED_OUTPUT_DIR="$PWD/cases/normalized/test-case-1" ./make.sh normalize
-CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=submission-test-case-1 ./make.sh run-case
-```
-
-Expected artifacts for hand-in support:
-
-- code under `src/`, configs, and tests
-- run artifacts under `outputs/runs/submission-test-case-1/`
-- normalized export under `cases/normalized/test-case-1/`
-- command and artifact metadata under `outputs/runs/submission-test-case-1/metadata/`
-- README instructions in this file
-
-For a manual step-by-step make workflow (`analyze -> simulate -> compare`) using one fixed source run id:
-
-```bash
-CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=stepwise-test-case-1 ./make.sh analyze
-CASE_DIR="$PWD/cases/external/test-case-1" RUN_ID=stepwise-test-case-1 ./make.sh simulate
-ANALYSIS_RESULT="$PWD/outputs/runs/stepwise-test-case-1/analysis/results/analysis_result.json" \
-SIMULATION_RESULT="$PWD/outputs/runs/stepwise-test-case-1/simulation/results/simulation_result.json" \
-COMPARE_RUN_ID=stepwise-test-case-1-compare \
-./make.sh compare
-```
-
 ## Configuration
 
 Configuration files live under `configs/`.
